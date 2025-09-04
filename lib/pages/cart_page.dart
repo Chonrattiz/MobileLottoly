@@ -62,7 +62,7 @@ class _CartPageState extends State<CartPage> {
           toolbarHeight: 80, // 📏 ความสูงแถบหัว
           title: const Text(
             'ตระกร้า',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22,color: Colors.white),
           ), // 🧾 ชื่อหน้า
           centerTitle: true,
           leading: IconButton(
