@@ -7,50 +7,58 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _buildAppBar(),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 20),
-            _buildSection('เลขเด็ดงวดนี้', Colors.red[800]!, [
-              _LotteryCard(
-                title: 'ชุดที่ 33',
-                number: '4 2 3 1 4 7',
-                price: '80',
-                accentColor: const Color(0xFFB5934E),
-              ),
-              _LotteryCard(
-                title: 'ชุดที่ 52',
-                number: '4 2 3 1 4 7',
-                price: '80',
-                accentColor: const Color(0xFFB5934E),
-              ),
-              _LotteryCard(
-                title: 'ชุดที่ 99',
-                number: '4 2 3 1 4 7',
-                price: '80',
-                accentColor: const Color(0xFFB5934E),
-              ),
-            ]),
-            const SizedBox(height: 20),
-            _buildSection('เลขมงคล', Colors.orange[800]!, [
-              _LotteryCard2(
-                title: 'ชุดที่ 40',
-                number: '4 7 5 1 2 7',
-                price: '80',
-                accentColor: const Color(0xFFE2B45A),
-                cardColor: const Color.fromARGB(255, 60, 91, 40),
-              ),
-              _LotteryCard2(
-                title: 'ชุดที่ 1',
-                number: '7 3 4 4 7 6',
-                price: '80',
-                accentColor: const Color(0xFFE2B45A),
-              ),
-            ]),
-            const SizedBox(height: 50),
-          ],
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/image/bg4.png'), // ใส่ path รูปของคุณ
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 20),
+              _buildSection('เลขเด็ดงวดนี้', Colors.red[800]!, [
+                _LotteryCard(
+                  title: 'ชุดที่ 33',
+                  number: '4 2 3 1 4 7',
+                  price: '80',
+                  accentColor: const Color(0xFFB5934E),
+                ),
+                _LotteryCard(
+                  title: 'ชุดที่ 52',
+                  number: '4 2 3 1 4 7',
+                  price: '80',
+                  accentColor: const Color(0xFFB5934E),
+                ),
+                _LotteryCard(
+                  title: 'ชุดที่ 99',
+                  number: '4 2 3 1 4 7',
+                  price: '80',
+                  accentColor: const Color(0xFFB5934E),
+                ),
+              ]),
+              const SizedBox(height: 20),
+              _buildSection('เลขมงคล', Colors.orange[800]!, [
+                _LotteryCard2(
+                  title: 'ชุดที่ 40',
+                  number: '4 7 5 1 2 7',
+                  price: '80',
+                  accentColor: const Color(0xFFE2B45A),
+                  cardColor: const Color.fromARGB(255, 60, 91, 40),
+                ),
+                _LotteryCard2(
+                  title: 'ชุดที่ 1',
+                  number: '7 3 4 4 7 6',
+                  price: '80',
+                  accentColor: const Color(0xFFE2B45A),
+                ),
+              ]),
+              const SizedBox(height: 50),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: _buildBottomNavigationBar(),
