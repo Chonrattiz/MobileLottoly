@@ -1,5 +1,8 @@
-//หน้าตระกร้า
+//ตระกร้า
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:lotto_application/pages/home.dart';
+import 'package:lotto_application/pages/navmenu.dart';
 
 class CartItem {
   // 📦 Model สำหรับรายการแต่ละชุด
@@ -40,19 +43,19 @@ class _CartPageState extends State<CartPage> {
 
   @override
   Widget build(BuildContext context) {
-    final red = const Color(0xFFD92323); // 🎨 สีแดง
-    final gold = const Color(0xFFFFD97B); // 🎨 สีทอง
+    final red = const Color(0xFFAD0101); // 🎨 สีแดง
+    final gold = const Color(0xFFE3BB66); // 🎨 สีทอง
 
     return Container(
       // // 🖼 ใส่พื้นหลังทั้งหน้า
       decoration: const BoxDecoration(
         image: DecorationImage(
-          image: AssetImage('assets/images/bg4.png'), // ✅ รูปพื้นหลัง
+          image: AssetImage('assets/image/bg4.png'), // ✅ รูปพื้นหลัง
           fit: BoxFit.cover, // ให้เต็มจอ
         ),
       ),
       child: Scaffold(
-        backgroundColor: Colors.transparent, // 👈 ต้องโปร่งใส
+        backgroundColor: Colors.transparent, // 🔹 ทำ Scaffold โปร่งใส
         appBar: AppBar(
           // 🔺 ส่วนหัวสีแดงด้านบน
           backgroundColor: red,
@@ -60,27 +63,39 @@ class _CartPageState extends State<CartPage> {
             borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
           ),
           toolbarHeight: 80, // 📏 ความสูงแถบหัว
-          title: const Text(
+          title: Text(
             'ตระกร้า',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22,color: Colors.white),
-          ), // 🧾 ชื่อหน้า
-          centerTitle: true,
+            style: GoogleFonts.itim(
+              textStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 30,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          //ย้อนกลับ
           leading: IconButton(
-            // 🔙 ปุ่มย้อนกลับ
             icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const HomeScreen(username: '',)),
+              );
+            },
           ),
         ),
         body: ListView(
           // 🔻 เนื้อหาที่เลื่อน scroll ได้
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           children: [
-            const Text(
+            Text(
               'รายการ',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: Color(0xFFD92323),
+              style: GoogleFonts.itim(
+                textStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 25, // ใช้ขนาด 18 ตามที่คุณให้
+                  color: Color(0xFFAD0101), // สีแดงตามโค้ด AD0101
+                ),
               ),
             ), // 🧾 หัวข้อ "รายการ"
             const SizedBox(height: 16),
@@ -101,14 +116,15 @@ class _CartPageState extends State<CartPage> {
             const SizedBox(height: 12),
             _summaryRow('ราคารวม', '$total บาท'), // 💰 ราคารวมทั้งหมด
             const SizedBox(height: 20),
+
             ElevatedButton(
               // ✅ ปุ่มเขียว “ดำเนินการสั่งซื้อ”
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
+                backgroundColor: const Color.fromARGB(255, 75, 211, 80),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                minimumSize: const Size.fromHeight(52),
+                minimumSize: const Size.fromHeight(50),
               ),
               onPressed: selectedCount == 0 ? null : () {},
               child: const Text(
@@ -123,36 +139,8 @@ class _CartPageState extends State<CartPage> {
             const SizedBox(height: 40), // ➕ เว้นท้ายหน้าจอ
           ],
         ),
-        bottomNavigationBar: Container(
-          // 🔻 แถบเมนูด้านล่าง
-          height: 72,
-          decoration: const BoxDecoration(color: Color(0xFFD92323)),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: const [
-              _BottomBarIcon(
-                icon: Icons.attach_money,
-                label: 'กระเป๋า',
-                color: Colors.green,
-              ), // 💼 เมนูกระเป๋า
-              _BottomBarIcon(
-                icon: Icons.verified,
-                label: 'ตรวจรางวัล',
-                color: Colors.blue,
-              ), // 🏆 ตรวจรางวัล
-              _BottomBarIcon(
-                icon: Icons.search,
-                label: 'ค้นหาเลข',
-                color: Color(0xFF80724E),
-              ), // 🔍 ค้นหาเลข
-              _BottomBarIcon(
-                icon: Icons.shopping_cart,
-                label: 'ตระกร้า',
-                color: Colors.purple,
-              ), // 🛒 ตะกร้า
-            ],
-          ),
-        ),
+        bottomNavigationBar:
+            const MyBottomNavigationBar(), //เรียกบาร์ด้านล่างมา
       ),
     );
   }
@@ -162,7 +150,7 @@ class _CartPageState extends State<CartPage> {
     height: 48,
     padding: const EdgeInsets.symmetric(horizontal: 16),
     decoration: BoxDecoration(
-      color: const Color.fromARGB(255, 253, 214, 136), // 🎨 สีพื้นกล่อง
+      color: const Color.fromARGB(255, 227, 187, 102), // 🎨 สีพื้นกล่อง
       borderRadius: BorderRadius.circular(14),
     ),
     child: Row(
@@ -203,8 +191,8 @@ class _CartItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final red = const Color(0xFFD92323); // สีแดงในภาพ
-    final gold = const Color(0xFFFFD97B); // สีทองกรอบนอก
+    final red = const Color(0xFFAD0101); // สีแดงในภาพ
+    final gold = const Color(0xFFE3BB66); // สีทองกรอบนอก
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -247,15 +235,15 @@ class _CartItemTile extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Container(
-                          height: 52,
+                          height: 40,
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(18),
+                            borderRadius: BorderRadius.circular(10),
                             boxShadow: const [
                               BoxShadow(
                                 color: Colors.black26,
-                                blurRadius: 8,
+                                blurRadius: 2,
                                 offset: Offset(0, 4),
                               ),
                             ],
@@ -267,7 +255,7 @@ class _CartItemTile extends StatelessWidget {
                             ),
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
-                              fontSize: 22,
+                              fontSize: 20,
                               color: Colors.black87,
                             ),
                             maxLines: 1,
@@ -287,18 +275,18 @@ class _CartItemTile extends StatelessWidget {
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 6,
+                          horizontal: 15,
+                          vertical: 5,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(999),
+                          borderRadius: BorderRadius.circular(100),
                         ),
                         child: Text(
                           '${item.price}',
                           style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
                             color: Colors.black,
                           ),
                         ),
@@ -350,34 +338,6 @@ class _TickBox extends StatelessWidget {
           color: checked ? Colors.white : Colors.transparent,
         ),
       ),
-    );
-  }
-}
-
-class _BottomBarIcon extends StatelessWidget {
-  const _BottomBarIcon({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        CircleAvatar(
-          backgroundColor: color,
-          radius: 18,
-          child: Icon(icon, size: 20, color: Colors.white),
-        ),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
-      ],
     );
   }
 }
