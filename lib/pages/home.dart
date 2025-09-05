@@ -92,9 +92,12 @@ class HomeScreen extends StatelessWidget {
           child: Icon(Icons.person, color: Colors.red),
         ),
       ),
-      title: const Text(
+      title: Text(
         'โปรไฟล์',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        style: GoogleFonts.itim(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
       ),
       // actions: const [
       //   Padding(
