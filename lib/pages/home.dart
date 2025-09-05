@@ -1,17 +1,5 @@
 import 'package:flutter/material.dart';
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(home: HomeScreen());
-  }
-}
+import 'package:google_fonts/google_fonts.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -121,13 +109,9 @@ class HomeScreen extends StatelessWidget {
     return Container(
       color: Colors.red[800],
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-      child: const Text(
+      child: Text(
         'วันนี้เฮงๆรวยๆ คุณ Tester',
-        style: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-        ),
+        style: GoogleFonts.itim(fontSize: 24, color: Colors.white),
       ),
     );
   }
@@ -227,13 +211,7 @@ class _SectionHeader extends StatelessWidget {
             bottomRight: Radius.circular(9.0),
           ),
         ),
-        child: Text(
-          title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        child: Text(title, style: GoogleFonts.itim(color: Colors.white)),
       ),
     );
   }
@@ -306,7 +284,7 @@ class _LotteryCard extends StatelessWidget {
                       ),
                       child: Text(
                         number,
-                        style: TextStyle(
+                        style: GoogleFonts.itim(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.grey[800],
@@ -319,7 +297,7 @@ class _LotteryCard extends StatelessWidget {
                   children: [
                     Text(
                       'ราคา',
-                      style: TextStyle(
+                      style: GoogleFonts.itim(
                         color: cardColor == Colors.red[800]
                             ? Colors.white
                             : Colors.grey[800],
@@ -337,7 +315,7 @@ class _LotteryCard extends StatelessWidget {
                       ),
                       child: Text(
                         price,
-                        style: const TextStyle(
+                        style: GoogleFonts.itim(
                           color: Color.fromARGB(255, 0, 0, 0),
                           fontWeight: FontWeight.bold,
                         ),
@@ -346,7 +324,7 @@ class _LotteryCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       'บาท',
-                      style: TextStyle(
+                      style: GoogleFonts.itim(
                         color: cardColor == Colors.red[800]
                             ? Colors.white
                             : Colors.grey[800],
