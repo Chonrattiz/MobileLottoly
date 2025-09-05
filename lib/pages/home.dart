@@ -1,5 +1,18 @@
 import 'package:flutter/material.dart';
 
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(home: HomeScreen());
+  }
+}
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -8,9 +21,9 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: _buildAppBar(),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/image/bg4.png'), // ใส่ path รูปของคุณ
+            image: AssetImage('assets/image/bg4.png'),
             fit: BoxFit.cover,
           ),
         ),
@@ -20,40 +33,55 @@ class HomeScreen extends StatelessWidget {
             children: [
               _buildHeader(),
               const SizedBox(height: 20),
-              _buildSection('เลขเด็ดงวดนี้', Colors.red[800]!, [
-                _LotteryCard(
-                  title: 'ชุดที่ 33',
-                  number: '4 2 3 1 4 7',
-                  price: '80',
-                  accentColor: const Color(0xFFB5934E),
-                ),
-                _LotteryCard(
-                  title: 'ชุดที่ 52',
-                  number: '4 2 3 1 4 7',
-                  price: '80',
-                  accentColor: const Color(0xFFB5934E),
-                ),
-                _LotteryCard(
-                  title: 'ชุดที่ 99',
-                  number: '4 2 3 1 4 7',
-                  price: '80',
-                  accentColor: const Color(0xFFB5934E),
-                ),
-              ]),
+              // ใช้ _LotteryCard คลาสเดียว
+              _buildSection(
+                'เลขเด็ดงวดนี้',
+                const Color.fromARGB(216, 198, 161, 40)!,
+                [
+                  _LotteryCard(
+                    title: 'ชุดที่ 33',
+                    number: '4 2 3 1 4 7',
+                    price: '80',
+                    cardColor: Colors.red[800]!,
+                    borderColor: const Color.fromARGB(255, 254, 229, 4),
+                    cartColor: const Color.fromARGB(255, 254, 229, 4),
+                  ),
+                  _LotteryCard(
+                    title: 'ชุดที่ 52',
+                    number: '4 2 3 1 4 7',
+                    price: '80',
+                    cardColor: Colors.red[800]!,
+                    borderColor: const Color.fromARGB(255, 254, 229, 4),
+                    cartColor: const Color.fromARGB(255, 254, 229, 4),
+                  ),
+                  _LotteryCard(
+                    title: 'ชุดที่ 99',
+                    number: '4 2 3 1 4 7',
+                    price: '80',
+                    cardColor: Colors.red[800]!,
+                    borderColor: const Color.fromARGB(255, 254, 229, 4),
+                    cartColor: const Color.fromARGB(255, 254, 229, 4),
+                  ),
+                ],
+              ),
               const SizedBox(height: 20),
-              _buildSection('เลขมงคล', Colors.orange[800]!, [
-                _LotteryCard2(
+              // ใช้ _LotteryCard คลาสเดียวสำหรับส่วนที่ 2
+              _buildSection('เลขมงคล', const Color.fromARGB(255, 255, 4, 4)!, [
+                _LotteryCard(
                   title: 'ชุดที่ 40',
                   number: '4 7 5 1 2 7',
                   price: '80',
-                  accentColor: const Color(0xFFE2B45A),
-                  cardColor: const Color.fromARGB(255, 60, 91, 40),
+                  cardColor: const Color.fromARGB(255, 253, 214, 108),
+                  borderColor: const Color.fromARGB(255, 252, 184, 35),
+                  cartColor: const Color.fromARGB(255, 230, 32, 10),
                 ),
-                _LotteryCard2(
+                _LotteryCard(
                   title: 'ชุดที่ 1',
                   number: '7 3 4 4 7 6',
                   price: '80',
-                  accentColor: const Color(0xFFE2B45A),
+                  cardColor: const Color.fromARGB(255, 253, 214, 108),
+                  borderColor: const Color.fromARGB(255, 252, 184, 35),
+                  cartColor: const Color.fromARGB(255, 230, 32, 10),
                 ),
               ]),
               const SizedBox(height: 50),
@@ -80,12 +108,12 @@ class HomeScreen extends StatelessWidget {
         'โปรไฟล์',
         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
       ),
-      actions: const [
-        Padding(
-          padding: EdgeInsets.only(right: 16.0),
-          child: Icon(Icons.notifications, color: Colors.white),
-        ),
-      ],
+      // actions: const [
+      //   Padding(
+      //     padding: EdgeInsets.only(right: 16.0),
+      //     child: Icon(Icons.notifications, color: Colors.white),
+      //   ),
+      // ],
     );
   }
 
@@ -154,6 +182,25 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CircleAvatar(
+          radius: 24,
+          backgroundColor: color,
+          child: Icon(icon, color: Colors.white, size: 24),
+        ),
+        const SizedBox(height: 8),
+        Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
+      ],
+    );
+  }
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -192,42 +239,43 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+// รวม _LotteryCard และ _LotteryCard2
 class _LotteryCard extends StatelessWidget {
   final String title;
   final String number;
   final String price;
-  final Color accentColor;
-  final bool showCartIcon;
   final Color cardColor;
+  final Color borderColor;
+  final Color cartColor;
+  final bool showCartIcon;
 
   const _LotteryCard({
     required this.title,
     required this.number,
     required this.price,
-    required this.accentColor,
+    required this.cardColor,
+    required this.borderColor,
+    required this.cartColor,
     this.showCartIcon = true,
-    this.cardColor = const Color.fromARGB(255, 229, 216, 75),
   });
 
   @override
   Widget build(BuildContext context) {
-    const Color goldBorderColor = Color(0xFFFFD700);
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Container(
         decoration: BoxDecoration(
-          color: accentColor,
+          color: borderColor, // ใช้ borderColor เป็นสีขอบ
           borderRadius: BorderRadius.circular(16.0),
-          border: Border.all(color: goldBorderColor, width: 6.0),
         ),
-        child: Card(
-          margin: const EdgeInsets.all(0),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.0),
+        child: Container(
+          margin: const EdgeInsets.all(
+            6,
+          ), // ทำให้เกิดช่องว่างระหว่างขอบกับเนื้อหา
+          decoration: BoxDecoration(
+            color: cardColor, // ใช้ cardColor เป็นสีพื้นหลังการ์ด
+            borderRadius: BorderRadius.circular(10.0),
           ),
-          color: Colors.red[800],
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
@@ -238,8 +286,10 @@ class _LotteryCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: cardColor == Colors.red[800]
+                            ? Colors.white
+                            : Colors.grey[800], // ปรับสีตัวอักษรตามสีพื้นหลัง
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
@@ -267,130 +317,14 @@ class _LotteryCard extends StatelessWidget {
                 ),
                 Row(
                   children: [
-                    const Text('ราคา', style: TextStyle(color: Colors.white)),
-                    const SizedBox(width: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        price,
-                        style: TextStyle(
-                          color: const Color.fromARGB(255, 0, 0, 0),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    const Text('บาท', style: TextStyle(color: Colors.white)),
-                    if (showCartIcon)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: CircleAvatar(
-                          radius: 20,
-                          backgroundColor: accentColor,
-                          child: const Icon(
-                            Icons.add_shopping_cart,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LotteryCard2 extends StatelessWidget {
-  final String title;
-  final String number;
-  final String price;
-  final Color accentColor;
-  final bool showCartIcon;
-  final Color cardColor;
-
-  const _LotteryCard2({
-    required this.title,
-    required this.number,
-    required this.price,
-    required this.accentColor,
-    this.showCartIcon = true,
-    this.cardColor = const Color.fromARGB(255, 229, 216, 75),
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const Color goldBorderColor = Color(0xFFFFD700);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: accentColor,
-          borderRadius: BorderRadius.circular(16.0),
-          border: Border.all(
-            color: const Color.fromARGB(255, 252, 184, 35),
-            width: 6.0,
-          ),
-        ),
-        child: Card(
-          margin: const EdgeInsets.all(0),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.0),
-          ),
-          color: const Color.fromARGB(255, 253, 214, 108),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
                     Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                      'ราคา',
+                      style: TextStyle(
+                        color: cardColor == Colors.red[800]
+                            ? Colors.white
+                            : Colors.grey[800],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0,
-                        vertical: 10.0,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12.0),
-                      ),
-                      child: Text(
-                        number,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    const Text('ราคา', style: TextStyle(color: Colors.white)),
                     const SizedBox(width: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -403,20 +337,27 @@ class _LotteryCard2 extends StatelessWidget {
                       ),
                       child: Text(
                         price,
-                        style: TextStyle(
-                          color: const Color.fromARGB(255, 0, 0, 0),
+                        style: const TextStyle(
+                          color: Color.fromARGB(255, 0, 0, 0),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                     const SizedBox(width: 4),
-                    const Text('บาท', style: TextStyle(color: Colors.white)),
+                    Text(
+                      'บาท',
+                      style: TextStyle(
+                        color: cardColor == Colors.red[800]
+                            ? Colors.white
+                            : Colors.grey[800],
+                      ),
+                    ),
                     if (showCartIcon)
                       Padding(
                         padding: const EdgeInsets.only(left: 8.0),
                         child: CircleAvatar(
                           radius: 20,
-                          backgroundColor: accentColor,
+                          backgroundColor: cartColor,
                           child: const Icon(
                             Icons.add_shopping_cart,
                             color: Colors.white,
@@ -433,23 +374,4 @@ class _LotteryCard2 extends StatelessWidget {
       ),
     );
   }
-}
-
-Widget _buildNavItem({
-  required IconData icon,
-  required String label,
-  required Color color,
-}) {
-  return Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      CircleAvatar(
-        radius: 24,
-        backgroundColor: color,
-        child: Icon(icon, color: Colors.white, size: 24),
-      ),
-      const SizedBox(height: 8),
-      Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
-    ],
-  );
 }
