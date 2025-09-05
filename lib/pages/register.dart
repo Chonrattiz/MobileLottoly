@@ -2,37 +2,8 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 
-// ----- ตัวอย่าง Model (ตามของเดิม) -----
-class CustomerRegisterPostResponse {
-  final String fullname;
-  final String phone;
-  final String email;
-  final String image;
-  final String password;
-
-  CustomerRegisterPostResponse({
-    required this.fullname,
-    required this.phone,
-    required this.email,
-    required this.image,
-    required this.password,
-  });
-
-  Map<String, dynamic> toJson() => {
-    'fullname': fullname,
-    'phone': phone,
-    'email': email,
-    'image': image,
-    'password': password,
-  };
-}
-
-String customerRegisterPostResponseToJson(CustomerRegisterPostResponse data) {
-  return jsonEncode(data.toJson());
-}
-
-// ----- หน้าสมัครสมาชิก -----
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -52,14 +23,147 @@ class _RegisterPageState extends State<RegisterPage> {
 
   String errorText = '';
 
+  @override
+  void dispose() {
+    nameCtl.dispose();
+    emailCtl.dispose();
+    passwordCtl.dispose();
+    confirmCtl.dispose();
+    moneyCtl.dispose();
+    super.dispose();
+  }
+
+  // ฟังก์ชันสำหรับการสมัครสมาชิก
+  Future<void> createAccount(BuildContext context) async {
+    final moneyText = moneyCtl.text.trim();
+    final wallet = double.tryParse(moneyText); // แปลงค่าเป็น double
+
+    // ตรวจสอบว่าค่า wallet ถูกต้องหรือไม่
+    if (wallet == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('กรุณากรอกจำนวนเงินให้ถูกต้อง')),
+      );
+      return;
+    }
+
+    final data = {
+      "username": nameCtl.text,
+      "email": emailCtl.text,
+      "password": passwordCtl.text,
+      "role": 'member', // ตั้งค่าเป็น member, สามารถเปลี่ยนได้
+      "wallet": wallet, // ส่งค่าจำนวนเงินที่แปลงเป็น double
+    };
+
+    try {
+      final response = await http
+          .post(
+            Uri.parse(
+              'http://192.168.6.1:8080/register',
+            ), // URL สำหรับการสมัครสมาชิก
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(data),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        var responseData = jsonDecode(response.body);
+
+        if (responseData['status'] == 'ok') {
+          // ถ้าสมัครสมาชิกสำเร็จ
+          showDialog(
+            context: context,
+            builder:
+                (context) => AlertDialog(
+                  backgroundColor: const Color(0xFFEAF7EA),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+                  titlePadding: const EdgeInsets.only(top: 20),
+                  title: Column(
+                    children: const [
+                      Icon(
+                        Icons.check_circle,
+                        color: Color(0xFF4CAF50),
+                        size: 60,
+                      ),
+                      SizedBox(height: 12),
+                      Text(
+                        'สำเร็จ!',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2E7D32),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                  content: const Text(
+                    'สมัครสมาชิกเรียบร้อยแล้ว!',
+                    style: TextStyle(fontSize: 16, color: Color(0xFF4B4B4B)),
+                    textAlign: TextAlign.center,
+                  ),
+                  actionsAlignment: MainAxisAlignment.center,
+                  actions: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF388E3C),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop(); // ปิด dialog
+                        Navigator.of(context).pop(); // กลับหน้าก่อนหน้า
+                      },
+                      child: const Text(
+                        'ตกลง',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+          );
+        } else {
+          // ถ้า API ส่งว่าไม่สำเร็จ
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                responseData['message'] ?? 'ไม่สามารถสมัครสมาชิกได้',
+              ),
+            ),
+          );
+        }
+      } else {
+        // ถ้าสถานะไม่ใช่ 200
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('เกิดข้อผิดพลาดในการเชื่อมต่อ')),
+        );
+      }
+    } catch (e) {
+      // ถ้าเกิดข้อผิดพลาดในการติดต่อ API
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('เกิดข้อผิดพลาด: กรุณาลองใหม่')),
+      );
+    }
+  }
+
+  // ฟังก์ชันตรวจสอบข้อมูลและเรียกใช้ createAccount
   void createID() {
     final moneyText = moneyCtl.text.trim();
     final money = double.tryParse(moneyText);
-    log(nameCtl.text);
-    log(emailCtl.text);
-    log(passwordCtl.text);
-    log(confirmCtl.text);
-    log(moneyCtl.text);
 
     if (nameCtl.text.isEmpty ||
         emailCtl.text.isEmpty ||
@@ -77,103 +181,18 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() => errorText = 'กรอกจำนวนเงินได้เฉพาะตัวเลข');
       return;
     }
-
     if (money < 0) {
       setState(() => errorText = 'กรอกจำนวนเงินห้ามติดลบ');
       return;
     }
 
-    final payload = CustomerRegisterPostResponse(
-      fullname: nameCtl.text,
-      phone: '', // ไม่มีช่องใน UI ตัวอย่าง
-      email: emailCtl.text,
-      image:
-          'http://202.28.34.197:8888/contents/4a00cead-afb3-45db-a37a-c8bebe08fe0d.png',
-      password: passwordCtl.text,
-    );
-
-    log(customerRegisterPostResponseToJson(payload));
     setState(() => errorText = '');
-
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            backgroundColor: const Color(0xFFEAF7EA), // เขียวอ่อนสดใส
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
-            titlePadding: const EdgeInsets.only(top: 20),
-            title: Column(
-              children: const [
-                Icon(
-                  Icons.check_circle,
-                  color: Color(0xFF4CAF50), // เขียวสำเร็จ
-                  size: 60,
-                ),
-                SizedBox(height: 12),
-                Text(
-                  'สำเร็จ!',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2E7D32), // เขียวเข้ม
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-            content: const Text(
-              'สมัครสมาชิกเรียบร้อยแล้ว!',
-              style: TextStyle(fontSize: 16, color: Color(0xFF4B4B4B)),
-              textAlign: TextAlign.center,
-            ),
-            actionsAlignment: MainAxisAlignment.center,
-            actions: [
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF388E3C), // เขียวเข้ม
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                ),
-                onPressed: () {
-                  Navigator.of(context).pop(); // ปิด dialog
-                  Navigator.of(context).pop(); // กลับหน้าก่อนหน้า
-                },
-                child: const Text(
-                  'ตกลง',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ],
-          ),
-    );
-  }
-
-  @override
-  void dispose() {
-    nameCtl.dispose();
-    emailCtl.dispose();
-    passwordCtl.dispose();
-    confirmCtl.dispose();
-    moneyCtl.dispose();
-    super.dispose();
+    createAccount(context); // เรียกใช้ฟังก์ชันสมัครสมาชิก
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // สีสำรองกรณีรูปยังไม่โหลด
       backgroundColor: const Color(0xFFF9F1F7),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -190,13 +209,10 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 child: SafeArea(
                   bottom: false,
-
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const SizedBox(height: 60),
-
-                      // --- Header: ปุ่ม Back + หัวข้อ ---
                       Row(
                         children: [
                           InkWell(
@@ -207,8 +223,8 @@ class _RegisterPageState extends State<RegisterPage> {
                               decoration: BoxDecoration(
                                 color: const Color(0xFFA60000),
                                 borderRadius: BorderRadius.only(
-                                  topRight: Radius.circular(10), // มนซ้ายบน
-                                  bottomRight: Radius.circular(10), // มนขวาล่าง
+                                  topRight: Radius.circular(10),
+                                  bottomRight: Radius.circular(10),
                                 ),
                               ),
                               child: const Padding(
@@ -233,13 +249,10 @@ class _RegisterPageState extends State<RegisterPage> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 60), // เว้นขวาเท่าปุ่ม back
+                          const SizedBox(width: 60),
                         ],
                       ),
-
                       const SizedBox(height: 25),
-
-                      // --- Form (มี Padding ครอบ) ---
                       Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 35,
@@ -392,8 +405,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
-                                  onPressed:
-                                      createID, //เช็คว่ามีuserนี้ยังและอีเมลยัง
+                                  onPressed: createID,
                                   child: Text(
                                     'Create Account',
                                     style: GoogleFonts.carterOne(
@@ -420,7 +432,6 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 }
 
-// ----- การ์ดหุ้ม TextField
 class _InputCard extends StatelessWidget {
   const _InputCard({required this.child});
   final Widget child;
@@ -430,15 +441,12 @@ class _InputCard extends StatelessWidget {
     return Container(
       height: 56,
       decoration: BoxDecoration(
-        color: const Color(0xFFF2F2F2), // เทาอ่อนในภาพ
+        color: const Color(0xFFF2F2F2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFFA8A8A9), // สีขอบเทา
-          width: 1.2, // ความหนาขอบ
-        ),
+        border: Border.all(color: const Color(0xFFA8A8A9), width: 1.2),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x1F000000), // เงาอ่อน
+            color: Color(0x1F000000),
             blurRadius: 6,
             offset: Offset(0, 3),
           ),
