@@ -5,7 +5,8 @@ cd MobileLottoly
 flutter pub get
 flutter run
 ไฟล์ดาต้าเบส
-[db_oracel.sql](https://github.com/user-attachments/files/22115420/db_oracel.sql)
+[Uploading mb68_66011212129.sql…]()
+
 
 โฟลเดอร์ back-end 
 [api_oracel999.zip](https://github.com/user-attachments/files/22175719/api_oracel999.zip)
