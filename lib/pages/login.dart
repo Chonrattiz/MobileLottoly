@@ -1,8 +1,9 @@
 import 'dart:developer';
 import 'dart:convert';
-import 'package:flutter/material.dart';
 import 'package:app_oracel999/pages/register.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,11 +16,13 @@ class _LoginPageState extends State<LoginPage> {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _obscure = true;
+  bool _isLoading = false;
 
-  void login(BuildContext context) {
-    final data = {"phone": "0817399999", "password": "1111"};
-    log(jsonEncode(data));
-    // TODO: call API ของคุณ
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    super.dispose();
   }
 
   void register(BuildContext context) {
@@ -29,53 +32,98 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  @override
-  void dispose() {
-    _emailCtrl.dispose();
-    _passwordCtrl.dispose();
-    super.dispose();
+  Future<void> login(BuildContext context) async {
+    if (_emailCtrl.text.isEmpty || !_emailCtrl.text.contains('@')) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('กรุณากรอกอีเมลที่ถูกต้อง')));
+      return;
+    }
+
+    if (_passwordCtrl.text.isEmpty || _passwordCtrl.text.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัว')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final data = {"email": _emailCtrl.text, "password": _passwordCtrl.text};
+
+    try {
+      final response = await http
+          .post(
+            Uri.parse('http://192.168.6.1:8080/login'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(data),
+          )
+          .timeout(Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        var responseData = jsonDecode(response.body);
+
+        if (responseData['status'] == 'success') {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('ล็อกอินสำเร็จ')));
+          // ไปหน้าถัดไป
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('อีเมลหรือรหัสผ่านไม่ถูกต้อง')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์')),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('เกิดข้อผิดพลาด: ลองใหม่อีกครั้ง')),
+      );
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // สีเผื่อกรณีรูปยังไม่โหลด
       backgroundColor: const Color(0xFFF9F1F7),
       body: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(
             child: ConstrainedBox(
-              // ให้ความสูงขั้นต่ำเท่าหน้าจอ และยืดตามความสูงของคอนเทนต์
               constraints: BoxConstraints(minHeight: constraints.maxHeight),
               child: Container(
-                // พื้นหลังแบบภาพ (จะคลุมเต็มพื้นที่เสมอ)
                 decoration: const BoxDecoration(
                   image: DecorationImage(
                     image: AssetImage("assets/image/bg2.png"),
-                    fit: BoxFit.cover, // ครอบให้เต็มพื้นที่
-                    alignment: Alignment.center, // ครอบตรงกลาง
+                    fit: BoxFit.cover,
+                    alignment: Alignment.center,
                   ),
                 ),
                 child: SafeArea(
-                  bottom: false, // ให้พื้นหลังต่อถึงขอบล่าง
+                  bottom: false,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 40,
-                      vertical: 20,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         const SizedBox(height: 12),
-
-                        // โลโก้
                         Image.asset(
                           'assets/image/logo.png',
                           height: 400,
                           fit: BoxFit.contain,
                         ),
-
-                        // Email
                         _InputCard(
                           child: TextField(
                             controller: _emailCtrl,
@@ -90,10 +138,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 16),
-
-                        // Password + show/hide
                         _InputCard(
                           child: TextField(
                             controller: _passwordCtrl,
@@ -106,49 +151,42 @@ class _LoginPageState extends State<LoginPage> {
                                 color: Colors.black54,
                               ),
                               suffixIcon: IconButton(
-                                onPressed:
-                                    () => setState(() => _obscure = !_obscure),
+                                onPressed: () => setState(() => _obscure = !_obscure),
                                 icon: Icon(
-                                  _obscure
-                                      ? Icons.visibility
-                                      : Icons.visibility_off,
+                                  _obscure ? Icons.visibility : Icons.visibility_off,
                                   color: Colors.black54,
                                 ),
                               ),
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 20),
-
-                        // ปุ่ม Login 
                         SizedBox(
                           width: double.infinity,
                           height: 52,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(
-                                0xFFF3AB0A,
-                              ),
+                              backgroundColor: const Color(0xFFF3AB0A),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               elevation: 2,
                             ),
-                            onPressed: () => login(context),
-                            child: Text(
-                              'Login',
-                              style: GoogleFonts.carterOne(
-                                fontSize: 32,
-                                color: Color(0xFFB51823), // แดงเข้ม
-                              ),
-                            ),
+                            onPressed: _isLoading ? null : () => login(context),
+                            child: _isLoading
+                                ? const CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  )
+                                : Text(
+                                    'Login',
+                                    style: GoogleFonts.carterOne(
+                                      fontSize: 32,
+                                      color: Color(0xFFB51823),
+                                    ),
+                                  ),
                           ),
                         ),
-
                         const SizedBox(height: 12),
-
-                        // สมัครสมาชิก 
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -157,15 +195,10 @@ class _LoginPageState extends State<LoginPage> {
                               style: GoogleFonts.inter(
                                 color: const Color.fromARGB(255, 0, 0, 0),
                                 fontWeight: FontWeight.w500,
-                                fontSize: 20,
+                                fontSize: 18,
                               ),
                             ),
                             TextButton(
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                                minimumSize: const Size(0, 0),
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
                               onPressed: () => register(context),
                               child: Text(
                                 'สมัครสมาชิก',
@@ -181,10 +214,6 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ],
                         ),
-
-                        const SizedBox(height: 12),
-
-                        // Spacer ดันให้คอนเทนต์ไม่ชิดล่างเกินไป (ถ้าต้องการ)
                         const SizedBox(height: 12),
                       ],
                     ),
@@ -199,7 +228,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-/// การ์ดครอบ TextField
 class _InputCard extends StatelessWidget {
   const _InputCard({required this.child});
   final Widget child;
@@ -209,12 +237,9 @@ class _InputCard extends StatelessWidget {
     return Container(
       height: 56,
       decoration: BoxDecoration(
-        color: Color(0xFFF3F3F3),
+        color: const Color(0xFFF3F3F3),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFFA8A8A9), // สีขอบ
-          width: 2.0, // ความหนาของขอบ (ค่า default = 1.0)
-        ),
+        border: Border.all(color: const Color(0xFFA8A8A9), width: 2.0),
         boxShadow: const [
           BoxShadow(
             color: Color(0x14000000),
