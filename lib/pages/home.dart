@@ -1,35 +1,24 @@
 import 'dart:convert';
-import 'package:app_oracel999/pages/userprofile.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:app_oracel999/pages/navmenu.dart';
-import 'lotto_item.dart';
-import 'cart_provider.dart';
+import 'package:app_oracel999/pages/lotto_item.dart';
+import 'package:app_oracel999/pages/cart_provider.dart';
 
-// HomeScreen ต้องเป็น StatefulWidget เพื่อจัดการ state การโหลดข้อมูล
+// HomeScreen ต้องเป็น StatefulWidget เพื่อจัดการ state
 class HomeScreen extends StatefulWidget {
   final String username;
   final String userId;
 
-  const HomeScreen({
-    super.key,
-    required this.username,
-    required this.userId,
-  });
+  const HomeScreen({super.key, required this.username, required this.userId});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // --- 1. เพิ่ม GlobalKey สำหรับ ScaffoldMessenger ---
-  // นี่คือ "กุญแจพิเศษ" ที่ทำให้เราเรียก SnackBar ได้จากทุกที่
-  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
-      GlobalKey<ScaffoldMessengerState>();
-
-  // State Variables สำหรับเก็บข้อมูลและสถานะการโหลด
   List<LottoItem> _luckyLottos = [];
   List<LottoItem> _auspiciousLottos = [];
   bool _isLoading = true;
@@ -38,48 +27,47 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchHomePageData(); // เรียก API ตอนหน้าเปิด
+    _fetchHomePageData(); // โหลดข้อมูลตอนเปิดหน้า
   }
 
   // ฟังก์ชันดึงข้อมูลจาก API ทั้ง 2 เส้นพร้อมกัน
   Future<void> _fetchHomePageData() async {
-    // รีเซ็ตสถานะก่อนดึงข้อมูลใหม่ (สำหรับ RefreshIndicator)
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final luckyUrl = Uri.parse('http://192.168.6.1:8080/lotto/lucky');
-      final auspiciousUrl = Uri.parse('http://192.168.6.1:8080/lotto/Auspicious');
+      final luckyUrl = Uri.parse('http://192.168.85.1:8080/lotto/lucky');
+      final auspiciousUrl = Uri.parse(
+        'http://192.168.85.1:8080/lotto/Auspicious',
+      );
 
-      // ยิง request 2 เส้นพร้อมกันเพื่อความรวดเร็ว
       final responses = await Future.wait([
         http.get(luckyUrl).timeout(const Duration(seconds: 10)),
         http.get(auspiciousUrl).timeout(const Duration(seconds: 10)),
       ]);
 
-      // ตรวจสอบ Response ของ "เลขเด็ด"
       if (responses[0].statusCode == 200) {
         final data = jsonDecode(responses[0].body);
         final List<dynamic> itemsJson = data['data'] ?? [];
-        _luckyLottos = itemsJson.map((json) => LottoItem.fromJson(json)).toList();
+        _luckyLottos =
+            itemsJson.map((json) => LottoItem.fromJson(json)).toList();
       } else {
-        throw Exception('ไม่สามารถโหลดเลขเด็ด (รหัส: ${responses[0].statusCode})');
+        throw Exception('ไม่สามารถโหลดเลขเด็ด (${responses[0].statusCode})');
       }
 
-      // ตรวจสอบ Response ของ "เลขมงคล"
       if (responses[1].statusCode == 200) {
         final data = jsonDecode(responses[1].body);
         final List<dynamic> itemsJson = data['data'] ?? [];
-        _auspiciousLottos = itemsJson.map((json) => LottoItem.fromJson(json)).toList();
+        _auspiciousLottos =
+            itemsJson.map((json) => LottoItem.fromJson(json)).toList();
       } else {
-        throw Exception('ไม่สามารถโหลดเลขมงคล (รหัส: ${responses[1].statusCode})');
+        throw Exception('ไม่สามารถโหลดเลขมงคล (${responses[1].statusCode})');
       }
     } catch (e) {
       _errorMessage = "เกิดข้อผิดพลาด:\n${e.toString()}";
     } finally {
-      // อัปเดต UI ไม่ว่าจะสำเร็จหรือล้มเหลว
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -88,28 +76,33 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- 2. แก้ไขฟังก์ชัน _addToCart ใหม่ทั้งหมด (สำคัญที่สุด) ---
-  void _addToCart(LottoItem lotto) {
-    // ดึง CartProvider มาใช้งาน
+  // ฟังก์ชันเพิ่มลงตะกร้า (แก้ไข: เพิ่มพารามิเตอร์ colorType)
+  void _addToCart(LottoItem lotto, String colorType) {
     final cart = Provider.of<CartProvider>(context, listen: false);
+    final lottoIdAsString = lotto.lottoId.toString();
 
-    // ตรวจสอบว่ามีของในตะกร้าแล้วหรือยัง
-    if (cart.isItemInCart(lotto)) {
-      // --- ถ้ามีแล้ว ---
-      // ใช้ GlobalKey ในการแสดง SnackBar
-      _scaffoldMessengerKey.currentState?.showSnackBar(
+    // เช็คก่อนว่าสลากนี้อยู่ในตะกร้าแล้วหรือยัง
+    if (cart.isItemInCart(lottoIdAsString)) {
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('สลากใบนี้อยู่ในตะกร้าแล้ว'),
-          backgroundColor: Colors.orange, // สีส้มเพื่อเตือน
+          backgroundColor: Colors.orange,
           duration: Duration(seconds: 2),
         ),
       );
     } else {
-      // --- ถ้ายังไม่มี ---
-      // เพิ่มของลงตะกร้า
-      cart.addItem(lotto);
-      // ใช้ GlobalKey ในการแสดง SnackBar
-      _scaffoldMessengerKey.currentState?.showSnackBar(
+      // สร้าง CartItem ใหม่พร้อมสีที่ส่งมา
+      final newItem = CartItem(
+        id: lotto.lottoId.toString(),
+        number: lotto.lotteryNumber,
+        price: lotto.price.toInt(),
+        colorType: colorType, // ใช้สีที่ส่งเข้ามาจาก onAddToCart
+      );
+
+      // เพิ่มสลากลงตะกร้า
+      cart.addItem(newItem);
+
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('เพิ่มลงตะกร้าสำเร็จ!'),
           backgroundColor: Colors.green,
@@ -121,9 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // --- 3. เพิ่ม key ให้กับ Scaffold ---
     return Scaffold(
-      key: _scaffoldMessengerKey, // <-- กำหนด key ที่นี่
       appBar: _buildAppBar(context),
       body: Container(
         decoration: const BoxDecoration(
@@ -132,62 +123,30 @@ class _HomeScreenState extends State<HomeScreen> {
             fit: BoxFit.cover,
           ),
         ),
-        // จัดการการแสดงผลตามสถานะ
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: Colors.white))
-            : _errorMessage != null
-                ? Center(child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.yellow, fontSize: 16)),
-                ))
+        child:
+            _isLoading
+                ? const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                )
+                : _errorMessage != null
+                ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.yellow,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                )
                 : _buildContent(),
       ),
-      bottomNavigationBar:
-          MyBottomNavigationBar(username: widget.username, userId: widget.userId),
-    );
-  }
-
-  // Widget สำหรับแสดงเนื้อหาหลักเมื่อโหลดสำเร็จ
-  Widget _buildContent() {
-    return RefreshIndicator(
-      onRefresh: _fetchHomePageData,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 20),
-            // สร้าง Section เลขเด็ดจากข้อมูล _luckyLottos
-            _buildSection(
-              'เลขเด็ดงวดนี้',
-              const Color.fromARGB(216, 198, 161, 40),
-              _luckyLottos.map((lotto) {
-                return _LotteryCard(
-                  lotto: lotto,
-                  onAddToCart: () => _addToCart(lotto),
-                  cardColor: Colors.red[800]!,
-                  borderColor: const Color.fromARGB(255, 254, 229, 4),
-                  cartColor: const Color.fromARGB(255, 254, 229, 4),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 20),
-            // สร้าง Section เลขมงคลจากข้อมูล _auspiciousLottos
-            _buildSection('เลขมงคล', const Color.fromARGB(255, 255, 4, 4),
-              _auspiciousLottos.map((lotto) {
-                  return _LotteryCard(
-                    lotto: lotto,
-                    onAddToCart: () => _addToCart(lotto),
-                    cardColor: const Color.fromARGB(255, 253, 214, 108),
-                    borderColor: const Color.fromARGB(255, 252, 184, 35),
-                    cartColor: const Color.fromARGB(255, 230, 32, 10),
-                  );
-                }).toList()
-             ),
-            const SizedBox(height: 50),
-          ],
-        ),
+      bottomNavigationBar: MyBottomNavigationBar(
+        username: widget.username,
+        userId: widget.userId,
       ),
     );
   }
@@ -202,15 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.all(8.0),
         child: IconButton(
           onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ProfilePage(
-                  userId: widget.userId,
-                  username: widget.username,
-                ),
-              ),
-            );
+            /* TODO: ไปหน้าโปรไฟล์ */
           },
           icon: const CircleAvatar(
             backgroundColor: Colors.white,
@@ -239,6 +190,51 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildContent() {
+    return RefreshIndicator(
+      onRefresh: _fetchHomePageData,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 20),
+            _buildSection(
+              'เลขเด็ดงวดนี้',
+              const Color.fromARGB(216, 198, 161, 40),
+              _luckyLottos.map((lotto) {
+                return _LotteryCard(
+                  lotto: lotto,
+
+                  onAddToCart: () => _addToCart(lotto, "red"), // สีแดง
+                  cardColor: Colors.red[800]!,
+                  borderColor: const Color.fromARGB(255, 254, 229, 4),
+                  cartColor: const Color.fromARGB(255, 254, 229, 4),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+            _buildSection(
+              'เลขมงคล',
+              const Color.fromARGB(255, 255, 4, 4),
+              _auspiciousLottos.map((lotto) {
+                return _LotteryCard(
+                  lotto: lotto,
+                  onAddToCart: () => _addToCart(lotto, "yellow"), // สีเหลือง
+                  cardColor: const Color.fromARGB(255, 253, 214, 108),
+                  borderColor: const Color.fromARGB(255, 252, 184, 35),
+                  cartColor: const Color.fromARGB(255, 230, 32, 10),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 50),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildSection(String title, Color headerColor, List<Widget> cards) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -247,7 +243,12 @@ class _HomeScreenState extends State<HomeScreen> {
         if (cards.isEmpty)
           const Padding(
             padding: EdgeInsets.all(16.0),
-            child: Center(child: Text('ไม่พบข้อมูลสลากในหมวดนี้', style: TextStyle(color: Colors.white70))),
+            child: Center(
+              child: Text(
+                'ไม่พบข้อมูลสลากในหมวดนี้',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
           )
         else
           ...cards,
@@ -256,6 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+// --- Widgets แยกย่อย ---
 class _SectionHeader extends StatelessWidget {
   final String title;
   final Color color;
@@ -263,7 +265,12 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 0, right: 16.0, top: 8.0, bottom: 16.0),
+      padding: const EdgeInsets.only(
+        left: 0,
+        right: 16.0,
+        top: 8.0,
+        bottom: 16.0,
+      ),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
         decoration: BoxDecoration(
@@ -321,14 +328,20 @@ class _LotteryCard extends StatelessWidget {
                       Text(
                         'รหัสสลาก: ${lotto.lottoId}',
                         style: GoogleFonts.itim(
-                          color: cardColor == Colors.red[800] ? Colors.white : Colors.grey[800],
+                          color:
+                              cardColor == Colors.red[800]
+                                  ? Colors.white
+                                  : Colors.grey[800],
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 10.0,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12.0),
@@ -347,15 +360,43 @@ class _LotteryCard extends StatelessWidget {
                 ),
                 Row(
                   children: [
-                    Text('ราคา', style: GoogleFonts.itim(color: cardColor == Colors.red[800] ? Colors.white : Colors.grey[800])),
-                    const SizedBox(width: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
-                      child: Text(lotto.price.toStringAsFixed(0), style: GoogleFonts.itim(color: Colors.black, fontWeight: FontWeight.bold)),
+                    Text(
+                      'ราคา',
+                      style: GoogleFonts.itim(
+                        color:
+                            cardColor == Colors.red[800]
+                                ? Colors.white
+                                : Colors.grey[800],
+                      ),
                     ),
                     const SizedBox(width: 4),
-                    Text('บาท', style: GoogleFonts.itim(color: cardColor == Colors.red[800] ? Colors.white : Colors.grey[800])),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        lotto.price.toStringAsFixed(0),
+                        style: GoogleFonts.itim(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'บาท',
+                      style: GoogleFonts.itim(
+                        color:
+                            cardColor == Colors.red[800]
+                                ? Colors.white
+                                : Colors.grey[800],
+                      ),
+                    ),
                     GestureDetector(
                       onTap: onAddToCart,
                       child: Padding(
@@ -363,7 +404,11 @@ class _LotteryCard extends StatelessWidget {
                         child: CircleAvatar(
                           radius: 20,
                           backgroundColor: cartColor,
-                          child: const Icon(Icons.add_shopping_cart, color: Colors.white, size: 24),
+                          child: const Icon(
+                            Icons.add_shopping_cart,
+                            color: Colors.white,
+                            size: 24,
+                          ),
                         ),
                       ),
                     ),
@@ -377,4 +422,3 @@ class _LotteryCard extends StatelessWidget {
     );
   }
 }
-
