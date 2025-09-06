@@ -2,14 +2,23 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:myproject/pages/cart_page.dart';
-import 'package:myproject/pages/check.dart';
-import 'package:myproject/pages/home.dart';
-import 'package:myproject/pages/search_page.dart';
-import 'package:myproject/pages/wallet.dart';
+import 'package:app_oracel999/pages/cart_page.dart';
+import 'package:app_oracel999/pages/check.dart';
+import 'package:app_oracel999/pages/home.dart';
+import 'package:app_oracel999/pages/search_page.dart';
+import 'package:app_oracel999/pages/wallet_page.dart';
 
 class MyBottomNavigationBar extends StatelessWidget {
-  const MyBottomNavigationBar({super.key});
+  // 1. เพิ่มตัวแปร userId เพื่อรับค่าเข้ามาใน Widget นี้
+  final String userId;
+   final String username;
+
+  // 2. แก้ไข constructor ให้รับ userId เข้ามาตอนสร้าง Widget
+  const MyBottomNavigationBar({
+    super.key,
+    required this.userId,
+    required this.username,// กำหนดให้ต้องส่ง userId มาเสมอ
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -29,9 +38,10 @@ class MyBottomNavigationBar extends StatelessWidget {
           children: [
             GestureDetector(
               onTap: () {
-                // เปลี่ยนไปหน้า Wallet
+                // 3. ส่ง userId ไปยัง WalletPage (และลบ const ออก)
                 Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (context) => const WalletScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => WalletPage(username: username, userId: userId)),
                 );
               },
               child: _buildNavItem(
@@ -42,10 +52,10 @@ class MyBottomNavigationBar extends StatelessWidget {
             ),
             GestureDetector(
               onTap: () {
-                // เปลี่ยนไปหน้า Check
+                // 3. ส่ง userId ไปยัง LotteryCheckerPage (และลบ const ออก)
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(
-                    builder: (context) => const LotteryCheckerPage(),
+                    builder: (context) => LotteryCheckerPage(username: username, userId: userId),
                   ),
                 );
               },
@@ -57,9 +67,10 @@ class MyBottomNavigationBar extends StatelessWidget {
             ),
             GestureDetector(
               onTap: () {
-                // เปลี่ยนไปหน้า Home (สมมติว่าต้องการกลับไปหน้า Home)
+                // 3. ส่ง userId ไปยัง SearchPage (และลบ const ออก)
                 Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (context) => const SearchPage()),
+                  MaterialPageRoute(
+                      builder: (context) => SearchPage(username: username, userId: userId)),
                 );
               },
               child: _buildNavItem(
@@ -70,9 +81,10 @@ class MyBottomNavigationBar extends StatelessWidget {
             ),
             GestureDetector(
               onTap: () {
-                // เปลี่ยนไปหน้า Home (สมมติว่าต้องการกลับไปหน้า Home)
+                // 3. ส่ง userId ไปยัง CartPage (และลบ const ออก)
                 Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (context) => const CartPage()),
+                  MaterialPageRoute(
+                      builder: (context) => CartPage(username: username, userId: userId)),
                 );
               },
               child: _buildNavItem(
@@ -87,7 +99,7 @@ class MyBottomNavigationBar extends StatelessWidget {
     );
   }
 
-  // สร้าง Widget สำหรับแต่ละไอเทมในเมนู
+  // สร้าง Widget สำหรับแต่ละไอเทมในเมนู (ไม่ต้องแก้ไขส่วนนี้)
   Widget _buildNavItem({
     required IconData icon,
     required String label,
