@@ -4,6 +4,7 @@ import 'package:app_oracel999/pages/register.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:app_oracel999/pages/home.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -47,51 +48,79 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     final data = {"email": _emailCtrl.text, "password": _passwordCtrl.text};
 
     try {
       final response = await http
           .post(
-            Uri.parse('http://192.168.6.1:8080/login'),
+            Uri.parse(
+              'http://192.168.6.1:8080/login',
+            ), // <- ปรับตามเซิร์ฟเวอร์จริง
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode(data),
           )
-          .timeout(Duration(seconds: 10));
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        var responseData = jsonDecode(response.body);
+        final responseData = jsonDecode(response.body);
 
         if (responseData['status'] == 'success') {
+          // ดึง username ให้รองรับหลายโครงสร้าง (user.username | data.user.username | username)
+          String username = 'ผู้ใช้';
+          String userId = ''; // สร้างตัวแปรมารับค่า
+          try {
+            final user = responseData['user'] ?? responseData['data']?['user'];
+            username =
+                (user != null ? user['username'] : responseData['username']) ??
+                'ผู้ใช้';
+            userId =
+                (user != null
+                    ? user['id'].toString()
+                    : responseData['user_id'].toString()) ??
+                '';
+          } catch (_) {
+            // หากเกิดข้อผิดพลาด ให้ userId เป็นค่าว่างไปก่อน
+            userId = '';
+          }
+
+          if (!mounted) return;
+          setState(() => _isLoading = false);
+
+          // ไปหน้า Home พร้อมส่งชื่อผู้ใช้ (อย่าใช้ const)
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => HomeScreen(username: username, userId: userId),
+            ),
+          );
+        } else {
+          if (!mounted) return;
+          setState(() => _isLoading = false);
+          final msg = responseData['message'] ?? 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('ล็อกอินสำเร็จ')));
-          // ไปหน้าถัดไป
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('อีเมลหรือรหัสผ่านไม่ถูกต้อง')),
-          );
+          ).showSnackBar(SnackBar(content: Text(msg)));
         }
       } else {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์')),
+          SnackBar(
+            content: Text(
+              'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ (${response.statusCode})',
+            ),
+          ),
         );
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      if (!mounted) return;
+      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('เกิดข้อผิดพลาด: ลองใหม่อีกครั้ง')),
       );
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
   @override
@@ -114,7 +143,10 @@ class _LoginPageState extends State<LoginPage> {
                 child: SafeArea(
                   bottom: false,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 40,
+                      vertical: 20,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -151,9 +183,12 @@ class _LoginPageState extends State<LoginPage> {
                                 color: Colors.black54,
                               ),
                               suffixIcon: IconButton(
-                                onPressed: () => setState(() => _obscure = !_obscure),
+                                onPressed:
+                                    () => setState(() => _obscure = !_obscure),
                                 icon: Icon(
-                                  _obscure ? Icons.visibility : Icons.visibility_off,
+                                  _obscure
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
                                   color: Colors.black54,
                                 ),
                               ),
@@ -173,17 +208,20 @@ class _LoginPageState extends State<LoginPage> {
                               elevation: 2,
                             ),
                             onPressed: _isLoading ? null : () => login(context),
-                            child: _isLoading
-                                ? const CircularProgressIndicator(
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                  )
-                                : Text(
-                                    'Login',
-                                    style: GoogleFonts.carterOne(
-                                      fontSize: 32,
-                                      color: Color(0xFFB51823),
+                            child:
+                                _isLoading
+                                    ? const CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    )
+                                    : Text(
+                                      'Login',
+                                      style: GoogleFonts.carterOne(
+                                        fontSize: 32,
+                                        color: const Color(0xFFB51823),
+                                      ),
                                     ),
-                                  ),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -205,7 +243,7 @@ class _LoginPageState extends State<LoginPage> {
                                 style: GoogleFonts.inter(
                                   color: const Color(0xFF057CE4),
                                   decoration: TextDecoration.underline,
-                                  decorationColor: Color(0xFF057CE4),
+                                  decorationColor: const Color(0xFF057CE4),
                                   decorationThickness: 1.5,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 20,
