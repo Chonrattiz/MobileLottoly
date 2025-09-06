@@ -5,8 +5,9 @@ import 'package:myproject/pages/userprofile.dart';
 import 'bottom_navigation_bar.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key, required String username});
+ const HomeScreen({super.key, required this.username});
 
+  final String username; // <- เพิ่มตัวแปรรับชื่อ
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -120,7 +121,7 @@ class HomeScreen extends StatelessWidget {
       color: Colors.red[800],
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
       child: Text(
-        'วันนี้เฮงๆรวยๆ คุณ Tester',
+        'วันนี้เฮงๆรวยๆ คุณ $username',
         style: GoogleFonts.itim(fontSize: 24, color: Colors.white),
       ),
     );
@@ -300,3 +301,4 @@ class _LotteryCard extends StatelessWidget {
     );
   }
 }
+
