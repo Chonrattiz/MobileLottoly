@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:lotto_application/pages/home.dart';
 import 'package:lotto_application/pages/navmenu.dart';
+import 'package:provider/provider.dart';
+import 'package:lotto_application/pages/cart_provider.dart';
 
 class SearchItem {
   // 📦 Model สำหรับรายการแต่ละชุด
@@ -28,6 +31,10 @@ class SearchState extends State<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    final cartProvider = Provider.of<CartProvider>(
+      context,
+      listen: false,
+    ); // เพิ่มบรรทัดนี้
     final red = const Color(0xFFAD0101); //สีของบาร์ด้านบน
 
     return Container(
@@ -48,11 +55,11 @@ class SearchState extends State<SearchPage> {
             borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
           ),
           toolbarHeight: 80, //  ความสูงแถบหัว
-          title: const Text(
+          title: Text(
             'ค้นหาเลข',
-            style: TextStyle(
+            style: GoogleFonts.itim(
               fontWeight: FontWeight.bold,
-              fontSize: 22,
+              fontSize: 25,
               color: Colors.white,
             ),
           ),
@@ -62,7 +69,9 @@ class SearchState extends State<SearchPage> {
             onPressed: () {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const HomeScreen(username: '',)),
+                MaterialPageRoute(
+                  builder: (context) => const HomeScreen(username: ''),
+                ),
               );
             },
           ),
@@ -235,7 +244,7 @@ class SearchState extends State<SearchPage> {
 
             const SizedBox(height: 10),
             const Text(
-              'รายการค้นหา',
+              'ผลการค้นหา',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -250,7 +259,8 @@ class SearchState extends State<SearchPage> {
             ),
           ],
         ),
-        bottomNavigationBar: const MyBottomNavigationBar(), //เรียกบาร์ด้านล่างมา
+        bottomNavigationBar:
+            const MyBottomNavigationBar(), //เรียกบาร์ด้านล่างมา
       ),
     );
   }
@@ -266,6 +276,8 @@ class SearchItemTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final red = const Color(0xFFAD0101); // สีแดงในภาพ
     final gold = const Color(0xFFE3BB66); // สีทองกรอบนอก
+    // เพิ่มบรรทัดนี้ใน build method ของ SearchItemTile
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -372,21 +384,39 @@ class SearchItemTile extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
 
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10, //ยาวกรอบขาวราคา
-                          vertical: 10, //สูงกรอบขาวราคา
-                        ),
-                        decoration: BoxDecoration(
-                          color: Color.fromARGB(255, 227, 187, 102),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-
-                        child: Icon(
-                          //ไอคอนเพิ่มลงตระกร้า
-                          Icons.add_shopping_cart,
-                          color: Color.fromARGB(255, 255, 255, 255),
-                          size: 25,
+                      // แก้ไขตรงปุ่มรถเข็น
+                      GestureDetector(
+                        onTap: () {
+                          // โค้ดสำหรับเพิ่มสินค้าลงตะกร้า
+                          final newItem = CartItem(
+                            id: item.id,
+                            price: item.price,
+                            number: '123456',
+                          );
+                          cartProvider.addItem(newItem);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'เพิ่มชุดที่ ${item.id} ลงในตะกร้าแล้ว',
+                              ),
+                              duration: const Duration(seconds: 1),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Color.fromARGB(255, 227, 187, 102),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Icon(
+                            Icons.add_shopping_cart,
+                            color: Color.fromARGB(255, 255, 255, 255),
+                            size: 25,
+                          ),
                         ),
                       ),
                     ],
