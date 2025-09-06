@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lotto_application/pages/home.dart';
-import 'package:lotto_application/pages/navmenu.dart';
+import 'package:app_oracel999/pages/home.dart';
+import 'package:app_oracel999/pages/navmenu.dart';
 import 'package:provider/provider.dart';
-import 'package:lotto_application/pages/cart_provider.dart';
+import 'package:app_oracel999/pages/cart_provider.dart';
 
 class SearchItem {
   // 📦 Model สำหรับรายการแต่ละชุด
@@ -14,7 +14,12 @@ class SearchItem {
 }
 
 class SearchPage extends StatefulWidget {
-  const SearchPage({super.key});
+  final String userId;
+  final String username;
+
+  const SearchPage({super.key,
+    required this.userId,
+    required this.username, });
 
   @override
   State<SearchPage> createState() => SearchState();
@@ -67,10 +72,13 @@ class SearchState extends State<SearchPage> {
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () {
-              Navigator.pushReplacement(
+               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const HomeScreen(username: ''),
+                  builder: (context) => HomeScreen(
+                    username: widget.username,
+                    userId: widget.userId,
+                  ),
                 ),
               );
             },
@@ -259,8 +267,10 @@ class SearchState extends State<SearchPage> {
             ),
           ],
         ),
-        bottomNavigationBar:
-            const MyBottomNavigationBar(), //เรียกบาร์ด้านล่างมา
+       bottomNavigationBar: MyBottomNavigationBar(
+          username: widget.username,
+          userId: widget.userId,
+        ), //เรียกบาร์ด้านล่างมา
       ),
     );
   }
@@ -388,12 +398,12 @@ class SearchItemTile extends StatelessWidget {
                       GestureDetector(
                         onTap: () {
                           // โค้ดสำหรับเพิ่มสินค้าลงตะกร้า
-                          final newItem = CartItem(
-                            id: item.id,
-                            price: item.price,
-                            number: '123456',
-                          );
-                          cartProvider.addItem(newItem);
+                          // final newItem = CartItem(
+                          //   id: item.id,
+                          //   price: item.price,
+                          //   number: '123456',
+                          // );
+                          // cartProvider.addItem(newItem);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
