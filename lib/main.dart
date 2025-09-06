@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
-import 'pages/login.dart';
+import 'package:provider/provider.dart'; // 1. import package provider
+import 'package:app_oracel999/pages/login.dart';
+import 'package:app_oracel999/pages/cart_provider.dart'; // 2. import "สมอง" ของตะกร้า
 
 void main() {
-  runApp(const MyApp());
+  // 3. ครอบแอปทั้งหมดด้วย ChangeNotifierProvider
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => CartProvider(), // <-- สร้าง "สมอง" ของตะกร้าที่นี่
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -12,11 +20,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Travel Login',
-      theme: ThemeData(
-        primarySwatch: Colors.purple,
-      ),
-      home: const LoginPage(),
+      title: 'Lotto Login',
+      theme: ThemeData(primarySwatch: Colors.deepOrange), // เปลี่ยนสี Theme เล็กน้อย
+      home: const LoginPage(), // เริ่มที่หน้า Login โดยตรง
     );
   }
 }
