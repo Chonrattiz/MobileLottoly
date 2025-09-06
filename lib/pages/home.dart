@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:myproject/pages/navmenu.dart';
+import 'package:myproject/pages/userprofile.dart';
+import 'bottom_navigation_bar.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key, required this.username});
-
-  final String username; // <- เพิ่มตัวแปรรับชื่อ
+  const HomeScreen({super.key, required String username});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _buildAppBar(),
+      appBar: _buildAppBar(context),
       body: Container(
         decoration: const BoxDecoration(
           image: DecorationImage(
@@ -23,7 +24,6 @@ class HomeScreen extends StatelessWidget {
             children: [
               _buildHeader(),
               const SizedBox(height: 20),
-              // ใช้ _LotteryCard คลาสเดียว
               _buildSection(
                 'เลขเด็ดงวดนี้',
                 const Color.fromARGB(216, 198, 161, 40)!,
@@ -55,7 +55,6 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
-              // ใช้ _LotteryCard คลาสเดียวสำหรับส่วนที่ 2
               _buildSection('เลขมงคล', const Color.fromARGB(255, 255, 4, 4)!, [
                 _LotteryCard(
                   title: 'ชุดที่ 40',
@@ -79,19 +78,31 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
+      bottomNavigationBar:
+          const MyBottomNavigationBar(), // <-- เรียกใช้ Widget ใหม่ที่นี่
     );
   }
 
-  AppBar _buildAppBar() {
+  AppBar _buildAppBar(BuildContext context) {
     return AppBar(
       backgroundColor: Colors.red[800],
       elevation: 0,
-      leading: const Padding(
-        padding: EdgeInsets.all(8.0),
-        child: CircleAvatar(
-          backgroundColor: Colors.white,
-          child: Icon(Icons.person, color: Colors.red),
+      leading: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: IconButton(
+          onPressed: () {
+            // โค้ดสำหรับนำทางไปยังหน้าโปรไฟล์
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => LotteryUI(),
+              ), // นำทางไป LotteryUI
+            );
+          },
+          icon: const CircleAvatar(
+            backgroundColor: Colors.white,
+            child: Icon(Icons.person, color: Colors.red),
+          ),
         ),
       ),
       title: Text(
@@ -101,12 +112,6 @@ class HomeScreen extends StatelessWidget {
           fontWeight: FontWeight.bold,
         ),
       ),
-      // actions: const [
-      //   Padding(
-      //     padding: EdgeInsets.only(right: 16.0),
-      //     child: Icon(Icons.notifications, color: Colors.white),
-      //   ),
-      // ],
     );
   }
 
@@ -115,7 +120,7 @@ class HomeScreen extends StatelessWidget {
       color: Colors.red[800],
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
       child: Text(
-        'วันนี้เฮงๆรวยๆ คุณ $username',
+        'วันนี้เฮงๆรวยๆ คุณ Tester',
         style: GoogleFonts.itim(fontSize: 24, color: Colors.white),
       ),
     );
@@ -127,66 +132,6 @@ class HomeScreen extends StatelessWidget {
       children: [
         _SectionHeader(title: title, color: headerColor),
         ...cards,
-      ],
-    );
-  }
-
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      height: 100,
-      decoration: BoxDecoration(
-        color: Colors.red[800],
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(
-              icon: Icons.account_balance_wallet,
-              label: 'กระเป๋า',
-              color: Colors.green,
-            ),
-            _buildNavItem(
-              icon: Icons.verified,
-              label: 'ตรวจรางวัล',
-              color: Colors.blue,
-            ),
-            _buildNavItem(
-              icon: Icons.search,
-              label: 'ค้นหาเลข',
-              color: Colors.brown,
-            ),
-            _buildNavItem(
-              icon: Icons.shopping_cart,
-              label: 'ตะกร้า',
-              color: Colors.purple,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem({
-    required IconData icon,
-    required String label,
-    required Color color,
-  }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        CircleAvatar(
-          radius: 24,
-          backgroundColor: color,
-          child: Icon(icon, color: Colors.white, size: 24),
-        ),
-        const SizedBox(height: 8),
-        Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
       ],
     );
   }
@@ -222,7 +167,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// รวม _LotteryCard และ _LotteryCard2
 class _LotteryCard extends StatelessWidget {
   final String title;
   final String number;
@@ -248,15 +192,13 @@ class _LotteryCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Container(
         decoration: BoxDecoration(
-          color: borderColor, // ใช้ borderColor เป็นสีขอบ
+          color: borderColor,
           borderRadius: BorderRadius.circular(16.0),
         ),
         child: Container(
-          margin: const EdgeInsets.all(
-            6,
-          ), // ทำให้เกิดช่องว่างระหว่างขอบกับเนื้อหา
+          margin: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: cardColor, // ใช้ cardColor เป็นสีพื้นหลังการ์ด
+            color: cardColor,
             borderRadius: BorderRadius.circular(10.0),
           ),
           child: Padding(
@@ -269,10 +211,10 @@ class _LotteryCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: TextStyle(
+                      style: GoogleFonts.itim(
                         color: cardColor == Colors.red[800]
                             ? Colors.white
-                            : Colors.grey[800], // ปรับสีตัวอักษรตามสีพื้นหลัง
+                            : Colors.grey[800],
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
@@ -321,7 +263,7 @@ class _LotteryCard extends StatelessWidget {
                       child: Text(
                         price,
                         style: GoogleFonts.itim(
-                          color: Color.fromARGB(255, 0, 0, 0),
+                          color: const Color.fromARGB(255, 0, 0, 0),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -358,4 +300,3 @@ class _LotteryCard extends StatelessWidget {
     );
   }
 }
-
