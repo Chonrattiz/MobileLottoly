@@ -1,9 +1,9 @@
 // File: LotteryCheckerPage.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:myproject/pages/home.dart';
-import 'package:myproject/pages/navmenu.dart';
-import 'bottom_navigation_bar.dart';
+import 'package:app_oracel999/pages/home.dart';
+import 'package:app_oracel999/pages/navmenu.dart';
+
 
 // void main() {
 //   runApp(const MyApp());
@@ -19,7 +19,11 @@ import 'bottom_navigation_bar.dart';
 // }
 
 class LotteryCheckerPage extends StatelessWidget {
-  const LotteryCheckerPage({super.key});
+    final String userId;
+  final String username;
+  const LotteryCheckerPage({super.key,
+    required this.userId,
+    required this.username,});
 
   @override
   Widget build(BuildContext context) {
@@ -32,9 +36,14 @@ class LotteryCheckerPage extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () {
-            Navigator.of(context).pushReplacement(
+            // *** แก้ไข: ลบ widget. ออก เพราะเป็น StatelessWidget ***
+            Navigator.pushReplacement(
+              context,
               MaterialPageRoute(
-                builder: (context) => const HomeScreen(username: ''),
+                builder: (context) => HomeScreen(
+                  username: username,
+                  userId: userId,
+                ),
               ),
             );
           },
@@ -72,7 +81,10 @@ class LotteryCheckerPage extends StatelessWidget {
           ),
         ),
       ),
-      bottomNavigationBar: const MyBottomNavigationBar(),
+      bottomNavigationBar: MyBottomNavigationBar(
+        username: username,
+        userId: userId,
+      ),
     );
   }
 
