@@ -1,23 +1,9 @@
-//ตระกร้า
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lotto_application/pages/home.dart';
 import 'package:lotto_application/pages/navmenu.dart';
-
-class CartItem {
-  // 📦 Model สำหรับรายการแต่ละชุด
-  CartItem({
-    required this.id,
-    required this.price,
-    this.selected = true,
-    this.number = '',
-  });
-
-  final String id; // 🆔 เลขชุด
-  final int price; // 💰 ราคา
-  bool selected; // ✅ ติ๊กเลือก
-  String number; // 🔢 ตัวเลขที่กรอก
-}
+import 'package:provider/provider.dart';
+import 'package:lotto_application/pages/cart_provider.dart';
 
 class CartPage extends StatefulWidget {
   // 📄 หน้า Cart ที่มีสถานะ
@@ -28,23 +14,13 @@ class CartPage extends StatefulWidget {
 }
 
 class _CartPageState extends State<CartPage> {
-  final List<CartItem> _items = [
-    // 📋 รายการ mock
-    CartItem(id: '60', price: 80),
-    CartItem(id: '99', price: 80),
-    CartItem(id: '80', price: 80),
-  ];
-
-  int get selectedCount =>
-      _items.where((e) => e.selected).length; // 🔢 จำนวนที่เลือก
-  int get total => _items
-      .where((e) => e.selected)
-      .fold(0, (sum, e) => sum + e.price); // 💵 รวมราคา
-
   @override
   Widget build(BuildContext context) {
+    // เพิ่มบรรทัดนี้เพื่อเรียกใช้งาน CartProvider
+    final cartProvider = Provider.of<CartProvider>(context);
     final red = const Color(0xFFAD0101); // 🎨 สีแดง
     final gold = const Color(0xFFE3BB66); // 🎨 สีทอง
+    final green = const Color.fromARGB(255, 8, 224, 62); 
 
     return Container(
       // // 🖼 ใส่พื้นหลังทั้งหน้า
@@ -79,13 +55,14 @@ class _CartPageState extends State<CartPage> {
             onPressed: () {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const HomeScreen(username: '',)),
+                MaterialPageRoute(
+                  builder: (context) => const HomeScreen(username: ''),
+                ),
               );
             },
           ),
         ),
         body: ListView(
-          // 🔻 เนื้อหาที่เลื่อน scroll ได้
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           children: [
             Text(
@@ -93,50 +70,43 @@ class _CartPageState extends State<CartPage> {
               style: GoogleFonts.itim(
                 textStyle: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 25, // ใช้ขนาด 18 ตามที่คุณให้
-                  color: Color(0xFFAD0101), // สีแดงตามโค้ด AD0101
+                  fontSize: 25,
+                  color: Color(0xFFAD0101),
                 ),
               ),
-            ), // 🧾 หัวข้อ "รายการ"
+            ),
             const SizedBox(height: 16),
-            ..._items.map(
+            // แก้ไขส่วนนี้ให้ดึงข้อมูลจาก provider
+            ...cartProvider.items.map(
               (item) => _CartItemTile(
-                // 🧾 แต่ละชุดในตะกร้า
                 item: item,
                 onChangedSelected: (v) =>
-                    setState(() => item.selected = v ?? false),
+                    cartProvider.toggleItemSelection(item.id, v ?? false),
                 onChangedNumber: (text) => setState(() => item.number = text),
               ),
             ),
             const SizedBox(height: 20),
-            _summaryRow(
-              'จำนวน',
-              '$selectedCount รายการ',
-            ), // 📊 แสดงจำนวนที่เลือก
+            // แก้ไขส่วนนี้ให้ดึงข้อมูลจาก provider
+            _summaryRow('จำนวน', '${cartProvider.selectedCount} รายการ'),
             const SizedBox(height: 12),
-            _summaryRow('ราคารวม', '$total บาท'), // 💰 ราคารวมทั้งหมด
-            const SizedBox(height: 20),
+            // แก้ไขส่วนนี้ให้ดึงข้อมูลจาก provider
+            _summaryRow('ราคารวม', '${cartProvider.total} บาท'),
 
+            // เพิ่มโค้ดส่วนนี้
+            const SizedBox(height: 20),
             ElevatedButton(
-              // ✅ ปุ่มเขียว “ดำเนินการสั่งซื้อ”
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromARGB(255, 75, 211, 80),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                backgroundColor: green,
                 minimumSize: const Size.fromHeight(50),
-              ),
-              onPressed: selectedCount == 0 ? null : () {},
-              child: const Text(
-                'ดำเนินการสั่งซื้อ',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
+              onPressed: () {
+                // โค้ดสำหรับจัดการเมื่อกดปุ่ม
+              },
+              child: const Text('ดำเนินการสั่งซื้อ', style: TextStyle(fontSize: 18)),
             ),
-            const SizedBox(height: 40), // ➕ เว้นท้ายหน้าจอ
           ],
         ),
         bottomNavigationBar:
