@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:app_oracel999/pages/userprofile.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -200,7 +201,17 @@ class _HomeScreenState extends State<HomeScreen> {
       leading: Padding(
         padding: const EdgeInsets.all(8.0),
         child: IconButton(
-          onPressed: () { /* TODO: ไปหน้าโปรไฟล์ */ },
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProfilePage(
+                  userId: widget.userId,
+                  username: widget.username,
+                ),
+              ),
+            );
+          },
           icon: const CircleAvatar(
             backgroundColor: Colors.white,
             child: Icon(Icons.person, color: Colors.red),
