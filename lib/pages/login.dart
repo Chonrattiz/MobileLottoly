@@ -39,11 +39,7 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    if (_passwordCtrl.text.isEmpty || _passwordCtrl.text.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัว')));
-      return;
-    }
+    
 
     setState(() => _isLoading = true);
 
