@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:test_t1/admim/RewardPage.dart';
-import 'package:test_t1/admim/lottoEnough.dart';
-import 'package:test_t1/admim/lottoselled.dart';
-import 'package:test_t1/admim/newlotto.dart';
-import '../services/lotto_service.dart';
+import 'package:app_oracel999/admim/RewardPage.dart';
+import 'package:app_oracel999/admim/lottoEnough.dart';
+import 'package:app_oracel999/admim/lottoselled.dart';
+import 'package:app_oracel999/admim/newlotto.dart';
+import 'package:app_oracel999/service/lotto_service.dart';
+import 'package:app_oracel999/admim/UIprofileAdmin.dart';
 import 'lotto_refresh.dart';
 
 class AdminMain extends StatefulWidget {
@@ -143,56 +144,76 @@ class _AdminMainState extends State<AdminMain> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(135.0),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(15),
-            bottomRight: Radius.circular(15),
-          ),
-          child: AppBar(
-            title: Padding(
-              padding: const EdgeInsets.only(top: 30.0),
-              child: Text(
-                'รายการ (Admin)',
-                style: GoogleFonts.itim(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
+      // ✨ --- START: โค้ดที่แก้ไข --- ✨
+      appBar: AppBar(
+        // 1. กำหนด Title โดยตรง
+        title: Padding(
+          padding: const EdgeInsets.only(top: 8.0), // อาจจะปรับแก้เล็กน้อย
+          child: Text(
+            'รายการ (Admin)',
+            style: GoogleFonts.itim(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
             ),
-            backgroundColor: const Color(0xFFD10400),
-            elevation: 0,
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(top: 12, right: 16),
-                child: Text(
-                  'สวัสดี, ${widget.username}',
-                  style: GoogleFonts.itim(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.only(top: 0, right: 16.0),
-                child: Icon(
-                  Icons.account_circle,
-                  size: 44.0,
-                  color: Colors.white,
-                ),
-              ),
-            ],
           ),
         ),
+        backgroundColor: const Color(0xFFD10400),
+        elevation: 0, // ไม่มีเงา
+        
+        // 2. ใช้ toolbarHeight เพื่อกำหนดความสูง
+        toolbarHeight: 110, // ปรับความสูงได้ตามต้องการ
+        
+        // 3. ใช้ shape เพื่อทำให้ขอบมน (วิธีมาตรฐาน)
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
+        actions: [
+          InkWell(
+            borderRadius: BorderRadius.circular(50),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProfilePageUI(
+                    userId: widget.userId,
+                    role: widget.role,
+                  ),
+                ),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(top: 0, right: 16, left: 16),
+              child: Row(
+                children: [
+                  Text(
+                    'สวัสดี, ${widget.username}',
+                    style: GoogleFonts.itim(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.account_circle,
+                    size: 44.0,
+                    color: Colors.white,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
+      // ✨ --- END: โค้ดที่แก้ไข --- ✨
       body: Stack(
         children: [
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assets/images/bb.png'),
+                image: AssetImage('assets/image/bg3.png'),
                 fit: BoxFit.cover,
               ),
             ),
@@ -202,7 +223,7 @@ class _AdminMainState extends State<AdminMain> {
             onRefresh: () async => _reload(),
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 180, 20, 24),
+              padding: const EdgeInsets.fromLTRB(20, 150, 20, 24), // ปรับ Padding ด้านบนให้พอดี
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -461,3 +482,5 @@ class _NavButton extends StatelessWidget {
     );
   }
 }
+
+    
