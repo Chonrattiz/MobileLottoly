@@ -1,10 +1,14 @@
-import 'dart:convert';
-import 'package:flutter/material.dart';
+// lib/pages/wallet_page.dart
+
 import 'package:app_oracel999/pages/home.dart';
-import 'package:app_oracel999/pages/navmenu.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+
+// --- Imports ที่สะอาดและเป็นระเบียบ ---
+import '../api/api_service.dart';
+import '../model/response/wallet_response.dart';
+import 'navmenu.dart';
 
 class WalletPage extends StatefulWidget {
   final String userId;
@@ -21,46 +25,14 @@ class WalletPage extends StatefulWidget {
 }
 
 class _WalletPageState extends State<WalletPage> {
-  int? _walletBalance;
-  bool _isLoading = true;
-  String? _errorMessage;
+  final _apiService = ApiService();
+  late Future<Wallet> _walletFuture; // 1. ใช้ FutureBuilder จัดการ State
 
   @override
   void initState() {
     super.initState();
-    _fetchWalletBalance();
-  }
-
-  Future<void> _fetchWalletBalance() async {
-    try {
-      final url =
-          Uri.parse('http://192.168.6.1:8080/wallet?user_id=${widget.userId}');
-      final response = await http.get(url).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-
-        // --- 4. แก้ไขวิธีดึงข้อมูลให้ตรงกับ JSON ที่ Backend ส่งมา ---
-        // เราต้องเข้าไปใน object 'user' ก่อน แล้วค่อยดึง 'wallet'
-        final balance = data['user']?['wallet'];
-
-        if (balance is int) {
-          setState(() {
-            _walletBalance = balance;
-            _isLoading = false;
-          });
-        } else {
-          throw Exception('ไม่พบข้อมูล wallet ในรูปแบบที่ถูกต้อง');
-        }
-      } else {
-        throw Exception('ไม่สามารถโหลดข้อมูลได้: ${response.statusCode}');
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = "เกิดข้อผิดพลาด: ${e.toString()}";
-        _isLoading = false;
-      });
-    }
+    // 2. เรียก API แค่ครั้งเดียวตอนเปิดหน้า
+    _walletFuture = _apiService.fetchWalletBalance(widget.userId);
   }
 
   String _formatBalance(int? balance) {
@@ -71,8 +43,8 @@ class _WalletPageState extends State<WalletPage> {
   @override
   Widget build(BuildContext context) {
     final red = const Color(0xFFAD0101);
-    final green = const Color.fromARGB(255, 1, 173, 10);
     final gold = const Color(0xFFE3BB66);
+    final green = const Color.fromARGB(255, 1, 173, 10);
 
     return Container(
       decoration: const BoxDecoration(
@@ -89,37 +61,41 @@ class _WalletPageState extends State<WalletPage> {
             borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
           ),
           toolbarHeight: 80,
-          title: Text('กระเป๋า',
-              style: GoogleFonts.itim(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 30,
-                  color: Colors.white)),
+          title: Text('กระเป๋า', style: GoogleFonts.itim(fontWeight: FontWeight.bold, fontSize: 30, color: Colors.white)),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => HomeScreen(
-                    username: widget.username,
-                    userId: widget.userId,
-                  ),
-                ),
-              );
-            },
+            onPressed: () => Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => HomeScreen(username: widget.username, userId: widget.userId)),
+            ),
           ),
         ),
-        body: Center(
-          child: _isLoading
-              ? const CircularProgressIndicator(color: Colors.white)
-              : _errorMessage != null
-                  ? Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(_errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.yellow, fontSize: 16)),
-                  )
-                  : _buildWalletContent(gold, green),
+        // --- 3. ใช้ FutureBuilder ในการแสดงผล ---
+        body: FutureBuilder<Wallet>(
+          future: _walletFuture,
+          builder: (context, snapshot) {
+            // --- สถานะ: กำลังโหลด ---
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(color: Colors.white));
+            }
+            // --- สถานะ: เกิดข้อผิดพลาด ---
+            if (snapshot.hasError) {
+              return Center(
+                child: Text(
+                  "เกิดข้อผิดพลาด:\n${snapshot.error.toString().replaceFirst('Exception: ', '')}",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.yellow, fontSize: 16),
+                ),
+              );
+            }
+            // --- สถานะ: โหลดสำเร็จและมีข้อมูล ---
+            if (snapshot.hasData) {
+              final wallet = snapshot.data!;
+              return _buildWalletContent(gold, green, wallet.balance);
+            }
+            // --- สถานะอื่นๆ (เช่น ไม่มีข้อมูล) ---
+            return const Center(child: Text('ไม่พบข้อมูล', style: TextStyle(color: Colors.white)));
+          },
         ),
         bottomNavigationBar: MyBottomNavigationBar(
           username: widget.username,
@@ -128,7 +104,9 @@ class _WalletPageState extends State<WalletPage> {
       ),
     );
   }
-  Widget _buildWalletContent(Color gold, Color green) {
+
+  // --- 4. ปรับปรุง Widget ให้รับค่า balance มาแสดงผล ---
+  Widget _buildWalletContent(Color gold, Color green, int balance) {
     return ListView(
       children: [
         const SizedBox(height: 150),
@@ -138,32 +116,18 @@ class _WalletPageState extends State<WalletPage> {
             height: 350,
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: gold,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: gold, shape: BoxShape.circle),
             child: Container(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              decoration: BoxDecoration(
-                color: green,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: green, shape: BoxShape.circle),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('ยอดเงินคงเหลือ',
-                      style: GoogleFonts.itim(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold)),
+                  Text('ยอดเงินคงเหลือ', style: GoogleFonts.itim(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 20),
                   Text(
-                    // ส่วนนี้ไม่ต้องแก้ไข เพราะมันจะดึงค่าจาก _walletBalance ให้อัตโนมัติ
-                    _formatBalance(_walletBalance),
-                    style: GoogleFonts.itim(
-                        color: Colors.white,
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold),
+                    _formatBalance(balance),
+                    style: GoogleFonts.itim(color: Colors.white, fontSize: 48, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -174,4 +138,3 @@ class _WalletPageState extends State<WalletPage> {
     );
   }
 }
-

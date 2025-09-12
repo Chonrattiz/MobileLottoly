@@ -1,31 +1,30 @@
-import 'dart:convert';
-import 'dart:math';
+// lib/pages/search_page.dart
+
+import 'package:app_oracel999/model/response/cart_entry.dart';
+import 'package:app_oracel999/pages/home.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
-import 'package:app_oracel999/pages/home.dart';
-import 'package:app_oracel999/pages/navmenu.dart';
-import 'package:app_oracel999/pages/cart_provider.dart';
-import 'package:app_oracel999/pages/lotto_item.dart';
+
+import '../api/api_service.dart';
+import '../model/response/lotto_item.dart';
+import '../providers/cart_provider.dart';
+import 'navmenu.dart';
 
 class SearchPage extends StatefulWidget {
   final String userId;
   final String username;
 
-  const SearchPage({
-    super.key,
-    required this.userId,
-    required this.username,
-  });
+  const SearchPage({super.key, required this.userId, required this.username});
 
   @override
   State<SearchPage> createState() => _SearchPageState();
 }
 
 class _SearchPageState extends State<SearchPage> {
-  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
-  final TextEditingController _searchController = TextEditingController();
+  final _apiService = ApiService();
+  final _searchController = TextEditingController();
+
   List<LottoItem> _searchResults = [];
   bool _isLoading = false;
   String? _searchMessage;
@@ -36,81 +35,83 @@ class _SearchPageState extends State<SearchPage> {
     super.dispose();
   }
 
-  // --- ฟังก์ชันสำหรับ "ค้นหา" ---
   Future<void> _performSearch() async {
     final query = _searchController.text.trim();
     if (query.isEmpty) {
-      _scaffoldMessengerKey.currentState?.showSnackBar(
-        const SnackBar(content: Text('กรุณาป้อนหมายเลขที่ต้องการค้นหา')),
-      );
+      _showSnackbar('กรุณาป้อนหมายเลขที่ต้องการค้นหา', isError: true);
       return;
     }
     FocusScope.of(context).unfocus();
-    setState(() { _isLoading = true; _searchMessage = null; _searchResults = []; });
+    setState(() {
+      _isLoading = true;
+      _searchMessage = null;
+      _searchResults = [];
+    });
 
     try {
-      // *** แก้ไข: เปลี่ยน query parameter จาก 'q' เป็น 'number' ให้ตรงกับ Backend ***
-      final url = Uri.parse('http://192.168.6.1:8080/lotto/search?number=$query');
-      final response = await http.get(url).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List<dynamic> itemsJson = data['data'] ?? [];
-        _searchResults = itemsJson.map((json) => LottoItem.fromJson(json)).toList();
-        if (_searchResults.isEmpty) {
+      final results = await _apiService.searchLotto(query);
+      setState(() {
+        _searchResults = results;
+        if (results.isEmpty) {
           _searchMessage = 'ไม่พบสลากที่ตรงกับ "$query"';
         }
-      } else {
-         throw Exception('ไม่สามารถค้นหาได้ (รหัส: ${response.statusCode})');
-      }
-    } catch(e) {
-      _searchMessage = "เกิดข้อผิดพลาด:\n${e.toString()}";
+      });
+    } catch (e) {
+      setState(() {
+        _searchMessage =
+            "เกิดข้อผิดพลาด:\n${e.toString().replaceFirst('Exception: ', '')}";
+      });
     } finally {
-      if(mounted) { setState(() { _isLoading = false; }); }
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
-  // --- ฟังก์ชันสำหรับ "สุ่มตัวเลข" ---
   Future<void> _getRandomNumber() async {
-     FocusScope.of(context).unfocus();
-     setState(() { _isLoading = true; _searchMessage = 'กำลังสุ่มเลข...'; _searchResults = []; });
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _isLoading = true;
+      _searchMessage = 'กำลังสุ่มเลข...';
+      _searchResults = [];
+    });
 
-     try {
-       final url = Uri.parse('http://192.168.6.1:8080/lotto/random?sell_only=true');
-       final response = await http.get(url).timeout(const Duration(seconds: 10));
-
-       if(response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          if (data['data'] != null) {
-            final randomLotto = LottoItem.fromJson(data['data']);
-            _searchController.text = randomLotto.lotteryNumber;
-            _searchMessage = 'เจอเลขสุ่มแล้ว! กดค้นหาได้เลย';
-          } else {
-            _searchMessage = 'ไม่พบสลากสำหรับสุ่ม';
-          }
-       } else {
-         throw Exception('ไม่สามารถสุ่มเลขได้ (รหัส: ${response.statusCode})');
-       }
-     } catch(e) {
-       _searchMessage = "เกิดข้อผิดพลาด:\n${e.toString()}";
-     } finally {
-       if(mounted) { setState(() { _isLoading = false; }); }
-     }
+    try {
+      final randomLotto = await _apiService.getRandomLotto();
+      setState(() {
+        _searchController.text = randomLotto.lotteryNumber;
+        _searchMessage = 'เจอเลขสุ่มแล้ว! กดค้นหาได้เลย';
+      });
+    } catch (e) {
+      setState(() {
+        _searchMessage =
+            "เกิดข้อผิดพลาด:\n${e.toString().replaceFirst('Exception: ', '')}";
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   void _addToCart(LottoItem lotto) {
     final cart = Provider.of<CartProvider>(context, listen: false);
     if (cart.isItemInCart(lotto)) {
-      _scaffoldMessengerKey.currentState?.showSnackBar(
-        const SnackBar(content: Text('สลากใบนี้อยู่ในตะกร้าแล้ว'), backgroundColor: Colors.orange),
-      );
+      _showSnackbar('สลากใบนี้อยู่ในตะกร้าแล้ว', isError: true);
     } else {
-      final newEntry = CartEntry(lotto: lotto, colorType: 'red');
-      cart.addItem(newEntry);
-      _scaffoldMessengerKey.currentState?.showSnackBar(
-        const SnackBar(content: Text('เพิ่มลงตะกร้าสำเร็จ!'), backgroundColor: Colors.green),
-      );
+      cart.addItem(CartEntry(lotto: lotto, colorType: 'red'));
+      _showSnackbar('เพิ่มลงตะกร้าสำเร็จ!');
     }
+  }
+
+  // ✅ ใช้ ScaffoldMessenger.of(context) แทน key
+  void _showSnackbar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.orange : Colors.green,
+      ),
+    );
   }
 
   @override
@@ -118,24 +119,33 @@ class _SearchPageState extends State<SearchPage> {
     final red = const Color(0xFFAD0101);
     return Container(
       decoration: const BoxDecoration(
-        image: DecorationImage(image: AssetImage('assets/image/bg4.png'), fit: BoxFit.cover),
+        image: DecorationImage(
+          image: AssetImage('assets/image/bg4.png'),
+          fit: BoxFit.cover,
+        ),
       ),
       child: Scaffold(
-        key: _scaffoldMessengerKey,
         backgroundColor: Colors.transparent,
         appBar: AppBar(
           backgroundColor: red,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(bottom: Radius.circular(20))),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+          ),
           toolbarHeight: 80,
-          title: Text('ค้นหาเลข', style: GoogleFonts.itim(fontWeight: FontWeight.bold, fontSize: 25, color: Colors.white)),
+          title: Text(
+            'ค้นหาเลข',
+            style: GoogleFonts.itim(
+                fontWeight: FontWeight.bold, fontSize: 25, color: Colors.white),
+          ),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => HomeScreen(username: widget.username, userId: widget.userId)),
-              );
-            },
+            onPressed: () => Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => HomeScreen(
+                    username: widget.username, userId: widget.userId),
+              ),
+            ),
           ),
         ),
         body: ListView(
@@ -143,12 +153,21 @@ class _SearchPageState extends State<SearchPage> {
           children: [
             _buildSearchCard(),
             const SizedBox(height: 20),
-            const Text('ผลการค้นหา', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color.fromARGB(255, 197, 46, 36))),
+            const Text(
+              'ผลการค้นหา',
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 197, 46, 36)),
+            ),
             const SizedBox(height: 10),
             _buildSearchResults(),
           ],
         ),
-        bottomNavigationBar: MyBottomNavigationBar(username: widget.username, userId: widget.userId),
+        bottomNavigationBar: MyBottomNavigationBar(
+          username: widget.username,
+          userId: widget.userId,
+        ),
       ),
     );
   }
@@ -159,32 +178,71 @@ class _SearchPageState extends State<SearchPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), spreadRadius: 2, blurRadius: 8, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            spreadRadius: 2,
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text("ค้นหาหมายเลขสลากฯ", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFFAD0101))),
+          const Text("ค้นหาหมายเลขสลากฯ",
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFAD0101))),
           const SizedBox(height: 20),
           TextField(
             controller: _searchController,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 20, color: Colors.black, fontWeight: FontWeight.bold, letterSpacing: 4),
+            style: const TextStyle(
+                fontSize: 20,
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 4),
             keyboardType: TextInputType.number,
             maxLength: 6,
             decoration: InputDecoration(
               hintText: 'กรอกเลข 1-6 หลัก',
               counterText: "",
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
             ),
           ),
           const SizedBox(height: 15),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              ElevatedButton(onPressed: _getRandomNumber, style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(255, 47, 132, 211)), child: const Text('สุ่มตัวเลข', style: TextStyle(color: Colors.white))),
-              ElevatedButton(onPressed: () { _searchController.clear(); setState(() { _searchResults = []; _searchMessage = null; }); }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700]), child: const Text('ล้างค่า', style: TextStyle(color: Colors.white))),
-              ElevatedButton(onPressed: _performSearch, style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(255, 73, 231, 81)), child: const Text('ค้นหา', style: TextStyle(color: Colors.white))),
+              ElevatedButton(
+                  onPressed: _getRandomNumber,
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color.fromARGB(255, 47, 132, 211)),
+                  child: const Text('สุ่มตัวเลข',
+                      style: TextStyle(color: Colors.white))),
+              ElevatedButton(
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() {
+                    _searchResults = [];
+                    _searchMessage = null;
+                  });
+                },
+                style:
+                    ElevatedButton.styleFrom(backgroundColor: Colors.red[700]),
+                child: const Text('ล้างค่า',
+                    style: TextStyle(color: Colors.white)),
+              ),
+              ElevatedButton(
+                onPressed: _performSearch,
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 73, 231, 81)),
+                child: const Text('ค้นหา',
+                    style: TextStyle(color: Colors.white)),
+              ),
             ],
           ),
         ],
@@ -194,13 +252,24 @@ class _SearchPageState extends State<SearchPage> {
 
   Widget _buildSearchResults() {
     if (_isLoading) {
-      return const Center(child: Padding(padding: EdgeInsets.all(16.0), child: CircularProgressIndicator(color: Colors.white)));
+      return const Center(
+          child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: CircularProgressIndicator(color: Colors.white)));
     }
     if (_searchMessage != null) {
-      return Center(child: Padding(padding: const EdgeInsets.all(16.0), child: Text(_searchMessage!, style: const TextStyle(color: Colors.white, fontSize: 18))));
+      return Center(
+          child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(_searchMessage!,
+                  style:
+                      const TextStyle(color: Colors.white, fontSize: 18))));
     }
     return Column(
-      children: _searchResults.map((item) => _SearchResultTile(item: item, onAddToCart: () => _addToCart(item))).toList(),
+      children: _searchResults
+          .map((item) =>
+              _SearchResultTile(item: item, onAddToCart: () => _addToCart(item)))
+          .toList(),
     );
   }
 }
@@ -217,46 +286,64 @@ class _SearchResultTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(color: borderColor, borderRadius: BorderRadius.circular(24)),
+      decoration: BoxDecoration(
+          color: borderColor, borderRadius: BorderRadius.circular(24)),
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(20)),
+        decoration: BoxDecoration(
+            color: cardColor, borderRadius: BorderRadius.circular(20)),
         child: Row(
           children: [
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('รหัสสลาก: ${item.lottoId}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
-                  const SizedBox(height: 10),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-                    child: Center(child: Text(item.lotteryNumber.split('').join(' '), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black))),
-                  ),
-                ],
-              ),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('รหัสสลาก: ${item.lottoId}',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16)),
+                    const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12)),
+                      child: Center(
+                        child: Text(item.lotteryNumber.split('').join(' '),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                                color: Colors.black)),
+                      ),
+                    ),
+                  ]),
             ),
             const SizedBox(width: 16),
             Column(
               children: [
-                Text('${item.price.toStringAsFixed(0)} บาท', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                Text('${item.price.toStringAsFixed(0)} บาท',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16)),
                 const SizedBox(height: 8),
                 GestureDetector(
                   onTap: onAddToCart,
                   child: Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: borderColor, shape: BoxShape.circle),
-                    child: const Icon(Icons.add_shopping_cart, color: Colors.white, size: 25),
+                    decoration: const BoxDecoration(
+                        color: borderColor, shape: BoxShape.circle),
+                    child: const Icon(Icons.add_shopping_cart,
+                        color: Colors.white, size: 25),
                   ),
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),
     );
   }
 }
-

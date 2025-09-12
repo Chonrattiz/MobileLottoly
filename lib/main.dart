@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart'; // 1. import package provider
 import 'package:app_oracel999/pages/login.dart';
-import 'package:app_oracel999/pages/cart_provider.dart'; // 2. import "สมอง" ของตะกร้า
+import 'package:app_oracel999/providers/cart_provider.dart'; // 2. import "สมอง" ของตะกร้า
 
 void main() {
   // 3. ครอบแอปทั้งหมดด้วย ChangeNotifierProvider

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:app_oracel999/pages/cart_page.dart';
 import 'package:app_oracel999/pages/check.dart';
-import 'package:app_oracel999/pages/home.dart';
 import 'package:app_oracel999/pages/search_page.dart';
 import 'package:app_oracel999/pages/wallet_page.dart';
 

@@ -1,8 +1,11 @@
-import 'dart:convert';
-import 'dart:developer';
+// lib/pages/register_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
+
+// --- Imports ที่สะอาดและเป็นระเบียบ ---
+import '../api/api_service.dart';
+import '../model/request/register_request.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -17,11 +20,12 @@ class _RegisterPageState extends State<RegisterPage> {
   final passwordCtl = TextEditingController();
   final confirmCtl = TextEditingController();
   final moneyCtl = TextEditingController();
+  final _apiService = ApiService(); // สร้าง Instance ของ ApiService
 
   bool _obscure1 = true;
   bool _obscure2 = true;
-
-  String errorText = '';
+  String _errorText = '';
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -33,165 +37,84 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  // ฟังก์ชันสำหรับการสมัครสมาชิก
-  Future<void> createAccount(BuildContext context) async {
-    final moneyText = moneyCtl.text.trim();
-    final wallet = double.tryParse(moneyText); // แปลงค่าเป็น double
-
-    // ตรวจสอบว่าค่า wallet ถูกต้องหรือไม่
-    if (wallet == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('กรุณากรอกจำนวนเงินให้ถูกต้อง')),
-      );
-      return;
-    }
-
-    final data = {
-      "username": nameCtl.text,
-      "email": emailCtl.text,
-      "password": passwordCtl.text,
-      "role": 'member', // ตั้งค่าเป็น member, สามารถเปลี่ยนได้
-      "wallet": wallet, // ส่งค่าจำนวนเงินที่แปลงเป็น double
-    };
-
-    try {
-      final response = await http
-          .post(
-            Uri.parse(
-              'http://192.168.6.1:8080/register',
-            ), // URL สำหรับการสมัครสมาชิก
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(data),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        var responseData = jsonDecode(response.body);
-
-        if (responseData['status'] == 'ok') {
-          // ถ้าสมัครสมาชิกสำเร็จ
-          showDialog(
-            context: context,
-            builder:
-                (context) => AlertDialog(
-                  backgroundColor: const Color(0xFFEAF7EA),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
-                  titlePadding: const EdgeInsets.only(top: 20),
-                  title: Column(
-                    children: const [
-                      Icon(
-                        Icons.check_circle,
-                        color: Color(0xFF4CAF50),
-                        size: 60,
-                      ),
-                      SizedBox(height: 12),
-                      Text(
-                        'สำเร็จ!',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2E7D32),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                  content: const Text(
-                    'สมัครสมาชิกเรียบร้อยแล้ว!',
-                    style: TextStyle(fontSize: 16, color: Color(0xFF4B4B4B)),
-                    textAlign: TextAlign.center,
-                  ),
-                  actionsAlignment: MainAxisAlignment.center,
-                  actions: [
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF388E3C),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.of(context).pop(); // ปิด dialog
-                        Navigator.of(context).pop(); // กลับหน้าก่อนหน้า
-                      },
-                      child: const Text(
-                        'ตกลง',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-          );
-        } else {
-          // ถ้า API ส่งว่าไม่สำเร็จ
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                responseData['message'] ?? 'ไม่สามารถสมัครสมาชิกได้',
-              ),
-            ),
-          );
-        }
-      } else {
-        // ถ้าสถานะไม่ใช่ 200
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('เกิดข้อผิดพลาดในการเชื่อมต่อ')),
-        );
-      }
-    } catch (e) {
-      // ถ้าเกิดข้อผิดพลาดในการติดต่อ API
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('เกิดข้อผิดพลาด: กรุณาลองใหม่')),
-      );
-    }
-  }
-
-  // ฟังก์ชันตรวจสอบข้อมูลและเรียกใช้ createAccount
-  void createID() {
-    final moneyText = moneyCtl.text.trim();
-    final money = double.tryParse(moneyText);
-
+  // --- ฟังก์ชันสมัครสมาชิกที่สั้น, สะอาด, และอ่านง่าย ---
+  Future<void> _createAccount() async {
+    // --- 1. ตรวจสอบข้อมูลในฟอร์ม (Validation) ---
+    final money = double.tryParse(moneyCtl.text.trim());
     if (nameCtl.text.isEmpty ||
         emailCtl.text.isEmpty ||
         passwordCtl.text.isEmpty ||
         confirmCtl.text.isEmpty ||
         moneyCtl.text.isEmpty) {
-      setState(() => errorText = 'กรุณากรอกข้อมูลให้ครบถ้วน');
+      setState(() => _errorText = 'กรุณากรอกข้อมูลให้ครบถ้วน');
       return;
     }
     if (passwordCtl.text != confirmCtl.text) {
-      setState(() => errorText = 'รหัสผ่านไม่ตรงกัน');
+      setState(() => _errorText = 'รหัสผ่านไม่ตรงกัน');
       return;
     }
-    if (money == null) {
-      setState(() => errorText = 'กรอกจำนวนเงินได้เฉพาะตัวเลข');
+    if (money == null || money < 0) {
+      setState(() => _errorText = 'กรุณากรอกจำนวนเงินให้ถูกต้อง');
       return;
     }
-    if (money < 0) {
-      setState(() => errorText = 'กรอกจำนวนเงินห้ามติดลบ');
-      return;
-    }
+    setState(() {
+      _errorText = '';
+      _isLoading = true;
+    });
 
-    setState(() => errorText = '');
-    createAccount(context); // เรียกใช้ฟังก์ชันสมัครสมาชิก
+    // --- 2. เรียกใช้ API ผ่าน Service ---
+    try {
+      final request = RegisterRequest(
+        username: nameCtl.text.trim(),
+        email: emailCtl.text.trim(),
+        password: passwordCtl.text,
+        wallet: money,
+      );
+      await _apiService.register(request);
+
+      // --- 3. ถ้าสำเร็จ: แสดง Dialog และกลับไปหน้า Login ---
+      if (mounted) {
+        _showSuccessDialog();
+      }
+    } catch (e) {
+      _showErrorSnackbar(e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message.replaceFirst('Exception: ', ''))),
+    );
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('สำเร็จ!'),
+            content: const Text('สมัครสมาชิกเรียบร้อยแล้ว!'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // ปิด Dialog
+                  Navigator.of(context).pop(); // กลับไปหน้า Login
+                },
+                child: const Text('ตกลง'),
+              ),
+            ],
+          ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    // โค้ดส่วน UI ทั้งหมดสามารถใช้ของเดิมได้เลย
+    // แค่เปลี่ยน onPressed ของปุ่มให้เรียกใช้ฟังก์ชัน _createAccount()
     return Scaffold(
       backgroundColor: const Color(0xFFF9F1F7),
       body: LayoutBuilder(
@@ -204,13 +127,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   image: DecorationImage(
                     image: AssetImage('assets/image/bg2.png'),
                     fit: BoxFit.cover,
-                    alignment: Alignment.center,
                   ),
                 ),
                 child: SafeArea(
-                  bottom: false,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const SizedBox(height: 60),
                       Row(
@@ -220,20 +140,17 @@ class _RegisterPageState extends State<RegisterPage> {
                             child: Container(
                               width: 46,
                               height: 48,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFA60000),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFA60000),
                                 borderRadius: BorderRadius.only(
                                   topRight: Radius.circular(10),
                                   bottomRight: Radius.circular(10),
                                 ),
                               ),
-                              child: const Padding(
-                                padding: EdgeInsets.only(left: 12),
-                                child: Icon(
-                                  Icons.arrow_back_ios,
-                                  color: Colors.white,
-                                  size: 37,
-                                ),
+                              child: const Icon(
+                                Icons.arrow_back_ios,
+                                color: Colors.white,
+                                size: 37,
                               ),
                             ),
                           ),
@@ -267,10 +184,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 decoration: const InputDecoration(
                                   labelText: 'Username',
                                   border: InputBorder.none,
-                                  prefixIcon: Icon(
-                                    Icons.person,
-                                    color: Colors.black54,
-                                  ),
+                                  prefixIcon: Icon(Icons.person),
                                 ),
                               ),
                             ),
@@ -282,10 +196,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 decoration: const InputDecoration(
                                   labelText: 'Email',
                                   border: InputBorder.none,
-                                  prefixIcon: Icon(
-                                    Icons.email,
-                                    color: Colors.black54,
-                                  ),
+                                  prefixIcon: Icon(Icons.email),
                                 ),
                               ),
                             ),
@@ -297,10 +208,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 decoration: InputDecoration(
                                   labelText: 'Password',
                                   border: InputBorder.none,
-                                  prefixIcon: const Icon(
-                                    Icons.lock,
-                                    color: Colors.black54,
-                                  ),
+                                  prefixIcon: const Icon(Icons.lock),
                                   suffixIcon: IconButton(
                                     onPressed:
                                         () => setState(
@@ -310,7 +218,6 @@ class _RegisterPageState extends State<RegisterPage> {
                                       _obscure1
                                           ? Icons.visibility
                                           : Icons.visibility_off,
-                                      color: Colors.black54,
                                     ),
                                   ),
                                 ),
@@ -324,10 +231,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 decoration: InputDecoration(
                                   labelText: 'Confirm Password',
                                   border: InputBorder.none,
-                                  prefixIcon: const Icon(
-                                    Icons.lock,
-                                    color: Colors.black54,
-                                  ),
+                                  prefixIcon: const Icon(Icons.lock),
                                   suffixIcon: IconButton(
                                     onPressed:
                                         () => setState(
@@ -337,7 +241,6 @@ class _RegisterPageState extends State<RegisterPage> {
                                       _obscure2
                                           ? Icons.visibility
                                           : Icons.visibility_off,
-                                      color: Colors.black54,
                                     ),
                                   ),
                                 ),
@@ -356,17 +259,16 @@ class _RegisterPageState extends State<RegisterPage> {
                                   border: InputBorder.none,
                                   prefixIcon: Icon(
                                     Icons.account_balance_wallet_outlined,
-                                    color: Colors.black54,
                                   ),
                                 ),
                               ),
                             ),
                             const SizedBox(height: 30),
-                            if (errorText.isNotEmpty)
+                            if (_errorText.isNotEmpty)
                               Padding(
-                                padding: const EdgeInsets.only(left: 6, top: 4),
+                                padding: const EdgeInsets.only(bottom: 18),
                                 child: Text(
-                                  errorText,
+                                  _errorText,
                                   style: const TextStyle(
                                     color: Colors.red,
                                     fontWeight: FontWeight.w500,
@@ -374,46 +276,28 @@ class _RegisterPageState extends State<RegisterPage> {
                                   ),
                                 ),
                               ),
-                            const SizedBox(height: 18),
                             SizedBox(
                               height: 52,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFF8E2217),
-                                      Color(0xFFB12E23),
-                                      Color(0xFFC53A2E),
-                                    ],
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color(0x33000000),
-                                      blurRadius: 8,
-                                      offset: Offset(0, 3),
-                                    ),
-                                  ],
-                                ),
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.transparent,
-                                    shadowColor: Colors.transparent,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  onPressed: createID,
-                                  child: Text(
-                                    'Create Account',
-                                    style: GoogleFonts.carterOne(
-                                      fontSize: 32,
-                                      color: Color(0xFFFFD04D),
-                                    ),
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFB12E23),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
+                                onPressed: _isLoading ? null : _createAccount,
+                                child:
+                                    _isLoading
+                                        ? const CircularProgressIndicator(
+                                          color: Colors.white,
+                                        )
+                                        : Text(
+                                          'Create Account',
+                                          style: GoogleFonts.carterOne(
+                                            fontSize: 32,
+                                            color: const Color(0xFFFFD04D),
+                                          ),
+                                        ),
                               ),
                             ),
                             const SizedBox(height: 24),
@@ -432,6 +316,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 }
 
+// Widget _InputCard ไม่ต้องแก้ไข
 class _InputCard extends StatelessWidget {
   const _InputCard({required this.child});
   final Widget child;

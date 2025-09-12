@@ -1,13 +1,15 @@
-import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
+// lib/pages/profile_page.dart
+
 import 'package:app_oracel999/pages/home.dart';
 import 'package:app_oracel999/pages/login.dart';
-import 'package:app_oracel999/pages/navmenu.dart';
-import 'profile_models.dart'; // <<< import โมเดลที่เราสร้าง
+import 'package:app_oracel999/pages/profile_models.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-// 1. เปลี่ยนเป็น StatefulWidget
+// --- Imports ที่สะอาดและเป็นระเบียบ ---
+import '../api/api_service.dart';
+import 'navmenu.dart';
+
 class ProfilePage extends StatefulWidget {
   final String userId;
   final String username;
@@ -19,88 +21,29 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  // 2. สร้าง State Variables
-  UserProfile? _userProfile;
-  List<PurchasedLotto> _purchasedLottos = [];
-  bool _isLoading = true;
-  String? _errorMessage;
-
-  // Controller สำหรับแสดงข้อมูลในช่อง Text Field
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
+  final _apiService = ApiService();
+  late Future<UserProfile> _userProfileFuture;
+  late Future<List<PurchasedLotto>> _purchasesFuture;
 
   @override
   void initState() {
     super.initState();
-    _fetchProfileData();
+    // 1. เรียก API ทั้งสองเส้นทางแค่ครั้งเดียวตอนเปิดหน้า
+    _userProfileFuture = _apiService.fetchUserProfile(widget.userId);
+    _purchasesFuture = _apiService.fetchUserPurchases(widget.userId);
   }
 
-  @override
-  void dispose() {
-    _usernameController.dispose();
-    _emailController.dispose();
-    super.dispose();
-  }
-
-  // 3. ฟังก์ชันดึงข้อมูลจาก API ทั้ง 2 เส้น
-  Future<void> _fetchProfileData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final profileUrl = Uri.parse(
-        'http://192.168.6.1:8080/profile?user_id=${widget.userId}',
-      );
-      final purchasesUrl = Uri.parse(
-        'http://192.168.6.1:8080/users/purchases?user_id=${widget.userId}',
-      );
-
-      final responses = await Future.wait([
-        http.get(profileUrl),
-        http.get(purchasesUrl),
-      ]);
-
-      if (responses[0].statusCode == 200) {
-        _userProfile = UserProfile.fromJson(jsonDecode(responses[0].body));
-        // อัปเดตข้อมูลใน Controller
-        _usernameController.text = _userProfile!.username;
-        _emailController.text = _userProfile!.email;
-      } else {
-        throw Exception('ไม่สามารถโหลดข้อมูลโปรไฟล์ได้');
-      }
-
-      if (responses[1].statusCode == 200) {
-        final data = jsonDecode(responses[1].body);
-        final List<dynamic> itemsJson = data['data'] ?? [];
-        _purchasedLottos =
-            itemsJson.map((json) => PurchasedLotto.fromJson(json)).toList();
-      } else {
-        throw Exception('ไม่สามารถโหลดรายการสั่งซื้อได้');
-      }
-    } catch (e) {
-      _errorMessage = e.toString();
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  // 4. ฟังก์ชันสำหรับ Log Out
   void _logout() {
     // กลับไปหน้า Login และล้างทุกหน้าก่อนหน้าออกจาก Stack
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const LoginPage()),
-      (Route<dynamic> route) => false, // เงื่อนไขนี้จะลบทุก Route
+      (Route<dynamic> route) => false,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-     return Container(
+    return Container(
       decoration: const BoxDecoration(
         image: DecorationImage(
           image: AssetImage('assets/image/bg4.png'), // รูปพื้นหลัง
@@ -108,7 +51,6 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ),
       child: Scaffold(
-        // --- 2. ทำให้ Scaffold และ AppBar โปร่งใส ---
         backgroundColor: Colors.transparent,
         appBar: AppBar(
           title: Text('โปรไฟล์', style: GoogleFonts.itim(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
@@ -131,11 +73,51 @@ class _ProfilePageState extends State<ProfilePage> {
             },
           ),
         ),
-        body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _errorMessage != null
-                ? Center(child: Text(_errorMessage!))
-                : _buildContent(),
+        // 2. ใช้ FutureBuilder ตัวแรกสำหรับโหลดข้อมูลโปรไฟล์
+        body: FutureBuilder<UserProfile>(
+          future: _userProfileFuture,
+          builder: (context, userSnapshot) {
+            // --- สถานะ: กำลังโหลด ---
+            if (userSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            // --- สถานะ: เกิดข้อผิดพลาด ---
+            if (userSnapshot.hasError) {
+              return Center(child: Text('เกิดข้อผิดพลาดในการโหลดโปรไฟล์: ${userSnapshot.error}'));
+            }
+            // --- สถานะ: ไม่มีข้อมูล ---
+            if (!userSnapshot.hasData) {
+              return const Center(child: Text('ไม่พบข้อมูลโปรไฟล์'));
+            }
+
+            final userProfile = userSnapshot.data!;
+
+            // --- เมื่อโหลดโปรไฟล์เสร็จแล้ว ให้แสดงเนื้อหาหลัก ---
+            return RefreshIndicator(
+              onRefresh: () async {
+                setState(() {
+                  _userProfileFuture = _apiService.fetchUserProfile(widget.userId);
+                  _purchasesFuture = _apiService.fetchUserPurchases(widget.userId);
+                });
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      _buildProfileCard(userProfile),
+                      const SizedBox(height: 24),
+                      // 3. ใช้ FutureBuilder ตัวที่สองสำหรับโหลดประวัติการซื้อ
+                      _buildPurchasesSection(),
+                      const SizedBox(height: 40.0),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
         bottomNavigationBar: MyBottomNavigationBar(
           username: widget.username,
           userId: widget.userId,
@@ -144,42 +126,19 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // Widget สำหรับแสดงเนื้อหาหลัก
-  Widget _buildContent() {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            _buildProfileCard(),
-            const SizedBox(height: 24),
-            _buildPurchasesCard(),
-            const SizedBox(height: 40.0),
-          ],
-        ),
-      ),
-    );
-  }
+  // --- โค้ดส่วน UI ที่เหลือ (Widgets) ---
 
-  // Widget สำหรับการ์ดข้อมูลโปรไฟล์
-  Widget _buildProfileCard() {
+  Widget _buildProfileCard(UserProfile profile) {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: _buildCardDecoration(),
       child: Column(
         children: [
-          Text(
-            'ข้อมูลของคุณ',
-            style: GoogleFonts.itim(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text('ข้อมูลของคุณ', style: GoogleFonts.itim(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-          _buildInputField(Icons.person, 'Username', _usernameController),
+          _buildInputField(Icons.person, TextEditingController(text: profile.username)),
           const SizedBox(height: 16),
-          _buildInputField(Icons.email, 'Email', _emailController),
+          _buildInputField(Icons.email, TextEditingController(text: profile.email)),
           const SizedBox(height: 24),
           _buildLogoutButton(),
         ],
@@ -187,35 +146,39 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // Widget สำหรับการ์ดรายการสั่งซื้อ
-  Widget _buildPurchasesCard() {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: _buildCardDecoration(),
-      child: Column(
-        children: [
-          Text(
-            'รายการสั่งซื้อ',
-            style: GoogleFonts.itim(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
+  Widget _buildPurchasesSection() {
+    return FutureBuilder<List<PurchasedLotto>>(
+      future: _purchasesFuture,
+      builder: (context, snapshot) {
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          decoration: _buildCardDecoration(),
+          child: Column(
+            children: [
+              Text('รายการสั่งซื้อ', style: GoogleFonts.itim(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              if (snapshot.connectionState == ConnectionState.waiting)
+                const CircularProgressIndicator(color: Colors.white),
+              if (snapshot.hasError)
+                Text('ไม่สามารถโหลดประวัติการซื้อได้', style: const TextStyle(color: Colors.yellow)),
+              if (snapshot.hasData)
+                if (snapshot.data!.isEmpty)
+                  const Text('คุณยังไม่มีรายการสั่งซื้อ', style: TextStyle(color: Colors.white70))
+                else
+                  // ใช้ ListView.separated เพื่อเพิ่มเส้นคั่นระหว่างรายการ
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: snapshot.data!.length,
+                    itemBuilder: (context, index) => _buildOrderItem(snapshot.data![index]),
+                    separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  ),
+            ],
           ),
-          const SizedBox(height: 16),
-          if (_purchasedLottos.isEmpty)
-            const Text(
-              'คุณยังไม่มีรายการสั่งซื้อ',
-              style: TextStyle(color: Colors.white70),
-            )
-          else
-            ..._purchasedLottos.map((item) => _buildOrderItem(item)),
-        ],
-      ),
+        );
+      },
     );
   }
-
-  // --- Widgets ย่อยสำหรับสร้าง UI ---
 
   BoxDecoration _buildCardDecoration() {
     return BoxDecoration(
@@ -240,11 +203,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildInputField(
-    IconData icon,
-    String hintText,
-    TextEditingController controller,
-  ) {
+  Widget _buildInputField(IconData icon, TextEditingController controller) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -257,11 +216,10 @@ class _ProfilePageState extends State<ProfilePage> {
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: TextField(
         controller: controller,
-        readOnly: true, // ทำให้แก้ไขไม่ได้
+        readOnly: true,
         decoration: InputDecoration(
           border: InputBorder.none,
           icon: Icon(icon, color: Colors.grey),
-          hintText: hintText,
           hintStyle: GoogleFonts.itim(color: Colors.grey),
         ),
       ),
@@ -288,7 +246,7 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
       child: ElevatedButton(
-        onPressed: _logout, // <<< เรียกฟังก์ชัน Log Out
+        onPressed: _logout,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           foregroundColor: Colors.white,
@@ -306,7 +264,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // --- Widget ที่ปรับปรุง UI ใหม่ทั้งหมด ---
   Widget _buildOrderItem(PurchasedLotto item) {
     final statusColor = _getStatusColor(item.status);
     final statusText = _getStatusText(item.status);
@@ -315,7 +272,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return Container(
       padding: const EdgeInsets.all(12.0),
       decoration: BoxDecoration(
-        color: const Color(0xFFB71C1C), // สีแดงเข้มเหมือนในรูป
+        color: const Color(0xFFB71C1C),
         border: Border.all(color: const Color(0xFFE3BB66), width: 3),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
@@ -334,29 +291,18 @@ class _ProfilePageState extends State<ProfilePage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'ชุดที่ ${item.lottoId}', // เปลี่ยนเป็น "ชุดที่" ตามรูป
-                style: GoogleFonts.itim(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
+                'ชุดที่ ${item.lottoId}',
+                style: GoogleFonts.itim(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10.0,
-                  vertical: 4.0,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
                 decoration: BoxDecoration(
                   color: statusColor,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   statusText,
-                  style: GoogleFonts.itim(
-                    color: statusTextColor, // ใช้สีตัวอักษรที่คำนวณไว้
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
+                  style: GoogleFonts.itim(color: statusTextColor, fontWeight: FontWeight.bold, fontSize: 12),
                 ),
               ),
             ],
@@ -370,16 +316,9 @@ class _ProfilePageState extends State<ProfilePage> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              item.lottoNumber
-                  .split('')
-                  .join(' '), // เพิ่มช่องว่างระหว่างตัวเลข
+              item.lottoNumber.split('').join(' '),
               textAlign: TextAlign.center,
-              style: GoogleFonts.itim(
-                fontWeight: FontWeight.bold,
-                fontSize: 28,
-                color: Colors.black87,
-                letterSpacing: 2.0, // เพิ่มระยะห่างตัวอักษรเล็กน้อย
-              ),
+              style: GoogleFonts.itim(fontWeight: FontWeight.bold, fontSize: 28, color: Colors.black87, letterSpacing: 2.0),
             ),
           ),
         ],
@@ -387,32 +326,29 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // ฟังก์ชันสำหรับสีพื้นหลังของสถานะ
   Color _getStatusColor(String status) {
     switch (status) {
       case 'ถูก':
-        return const Color(0xFF4CAF50); // สีเขียวสด
+        return const Color(0xFF4CAF50);
       case 'ไม่ถูก':
-        return const Color(0xFFF44336); // สีแดงสด
+        return const Color(0xFFF44336);
       case 'ยัง':
       default:
-        return Colors.white; // สีขาวตามรูป
+        return Colors.white;
     }
   }
 
-  // ฟังก์ชันสำหรับสีตัวอักษรของสถานะ
   Color _getStatusTextColor(String status) {
     switch (status) {
       case 'ถูก':
       case 'ไม่ถูก':
-        return Colors.white; // ถ้าพื้นหลังเป็นสี ให้ตัวอักษรเป็นสีขาว
+        return Colors.white;
       case 'ยัง':
       default:
-        return Colors.black54; // ถ้าพื้นหลังเป็นขาว ให้ตัวอักษรเป็นสีเทา
+        return Colors.black54;
     }
   }
 
-  // ฟังก์ชันสำหรับ "แปล" สถานะเป็นข้อความ
   String _getStatusText(String status) {
     switch (status) {
       case 'ถูก':
@@ -421,7 +357,7 @@ class _ProfilePageState extends State<ProfilePage> {
         return 'ไม่ถูกรางวัล';
       case 'ยัง':
       default:
-        return 'ยังไม่ประกาศ'; // เปลี่ยนข้อความตามรูป
+        return 'ยังไม่ประกาศ';
     }
   }
 }
