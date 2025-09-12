@@ -181,4 +181,28 @@ class LottoService {
       throw Exception('HTTP ${res.statusCode}: ${res.body}');
     }
   }
+
+  // นับจำนวนล็อตโต้ทั้งหมด
+  static Future<int> countAll() async {
+    final uri = Uri.parse('${Env.baseUrl}/lottos/count');
+    final res = await http.get(uri).timeout(const Duration(seconds: 10));
+    if (res.statusCode != 200) {
+      throw Exception('HTTP ${res.statusCode}: ${res.body}');
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    return (map['count'] as num).toInt();
+  }
+
+  // seed 100 ชุด (หรือจำนวนกำหนดเอง)
+  static Future<int> Generate({int count = 100}) async {
+    final uri = Uri.parse(
+      '${Env.baseUrl}/lotto/generate',
+    ).replace(queryParameters: {'count': '$count'});
+    final res = await http.post(uri).timeout(const Duration(seconds: 20));
+    if (res.statusCode != 200) {
+      throw Exception('HTTP ${res.statusCode}: ${res.body}');
+    }
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    return (map['inserted'] as num?)?.toInt() ?? 0;
+  }
 }
