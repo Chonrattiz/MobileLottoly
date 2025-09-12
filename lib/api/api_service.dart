@@ -1,8 +1,9 @@
 // lib/api/api_service.dart
 
 import 'dart:convert';
+import 'package:app_oracel999/model/response/cash_in_request.dart';
 import 'package:app_oracel999/model/response/purchase_request.dart';
-import 'package:app_oracel999/pages/profile_models.dart';
+import 'package:app_oracel999/model/response/profile_models.dart';
 import 'package:http/http.dart' as http;
 
 // --- Imports สำหรับ Models และ Config ---
@@ -214,7 +215,7 @@ class ApiService {
     }
   }
 
-   // --- 👇 เพิ่มฟังก์ชันนี้สำหรับ "ค้นหา" ---
+  // --- 👇 เพิ่มฟังก์ชันนี้สำหรับ "ค้นหา" ---
   Future<List<LottoItem>> searchLotto(String query) async {
     final url = Uri.parse('${AppConfig.baseUrl}/lotto/search?number=$query');
     try {
@@ -233,7 +234,7 @@ class ApiService {
 
   // --- 👇 เพิ่มฟังก์ชันนี้สำหรับ "สุ่มตัวเลข" ---
   Future<LottoItem> getRandomLotto() async {
-    final url = Uri.parse('${AppConfig.baseUrl}/lotto/random?sell_only=true');
+    final url = Uri.parse('${AppConfig.baseUrl}/lotto/random?sell_only=true');//
     try {
       final response = await http.get(url).timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
@@ -250,5 +251,27 @@ class ApiService {
       throw Exception('การเชื่อมต่อล้มเหลว: ${e.toString()}');
     }
   }
+ // --- ขึ้นเงินแล้วจะอัพเดรต ---
+  Future<void> cashInPrize(CashInRequest request) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/rewards/cashIn'); // ใช้ baseUrl จาก Config
+    try {
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(request.toJson()),
+          )
+          .timeout(const Duration(seconds: 15));
 
+      if (response.statusCode != 200) {
+        final responseBody = jsonDecode(response.body);
+        final errorMessage = responseBody['error'] ?? 'เกิดข้อผิดพลาดในการขึ้นเงิน';
+        throw Exception(errorMessage);
+      }
+      // ถ้าสำเร็จ (status 200) ไม่ต้องทำอะไร
+    } catch (e) {
+      throw Exception('การเชื่อมต่อผิดพลาด: ${e.toString()}');
+    }
+  }
+  
 }

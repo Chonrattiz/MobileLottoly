@@ -76,6 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
         const SnackBar(
           content: Text('อยู่ในตะกร้าแล้ว'),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 1),//กำหนดเวลาแสดง1วิ
         ),
       );
     } else {
@@ -84,6 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
         const SnackBar(
           content: Text('เพิ่มเข้าตะกร้าสำเร็จ'),
           backgroundColor: Colors.green,
+          duration: const Duration(seconds: 1),//กำหนดเวลาแสดง1วิ
         ),
       );
     }

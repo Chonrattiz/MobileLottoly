@@ -2,7 +2,7 @@
 
 import 'package:app_oracel999/pages/home.dart';
 import 'package:app_oracel999/pages/login.dart';
-import 'package:app_oracel999/pages/profile_models.dart';
+import 'package:app_oracel999/model/response/profile_models.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 

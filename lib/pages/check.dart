@@ -1,5 +1,7 @@
 // lib/pages/check_page.dart
 
+import 'package:app_oracel999/model/response/cash_in_request.dart';
+import 'package:app_oracel999/model/response/check_response.dart';
 import 'package:app_oracel999/pages/home.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,7 +9,6 @@ import 'package:intl/intl.dart';
 
 // --- Imports ที่สะอาดและเป็นระเบียบ ---
 import '../api/api_service.dart';
-import '../model/response/check_response.dart';
 import 'navmenu.dart';
 
 class LotteryCheckerPage extends StatefulWidget {
@@ -64,6 +65,45 @@ class _LotteryCheckerPageState extends State<LotteryCheckerPage> {
     } catch (e) {
       if (mounted) {
         Navigator.pop(context); // ปิด loading dialog
+        _showSnackbar(e.toString(), isError: true);
+      }
+    }
+  }
+
+  // --- ฟังก์ชันสำหรับขึ้นเงินรางวัล (เวอร์ชันสะอาด) ---
+  Future<void> _cashInPrize(CheckResult result) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final request = CashInRequest(
+        userId: int.parse(widget.userId),
+        lottoNumber: result.lottoNumber,
+      );
+      await _apiService.cashInPrize(request);
+
+      if (mounted) {
+        Navigator.pop(context); // ปิด loading
+        Navigator.pop(context); // ปิด dialog ผลรางวัล
+        _showSnackbar('ขึ้นเงินรางวัลสำเร็จ!', isError: false);
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => HomeScreen(
+                  username: widget.username,
+                  userId: widget.userId,
+                ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // ปิด loading
         _showSnackbar(e.toString(), isError: true);
       }
     }
@@ -348,7 +388,15 @@ class _LotteryCheckerPageState extends State<LotteryCheckerPage> {
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () {
+                        if (result.isWinner) {
+                          // ถ้าเป็นผู้ชนะ ให้เรียกฟังก์ชันขึ้นเงิน
+                          _cashInPrize(result);
+                        } else {
+                          // ถ้าไม่ใช่ ก็แค่ปิด dialog
+                          Navigator.pop(context);
+                        }
+                      },
                       child: Text(
                         result.isWinner ? 'ขึ้นเงินรางวัล' : 'ยืนยัน',
                         style: GoogleFonts.itim(
