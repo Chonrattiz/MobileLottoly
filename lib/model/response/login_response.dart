@@ -1,39 +1,38 @@
 // lib/model/response/user.dart
-
-//สร้างตัวเก็บข้อมูลที่จะดึงBackend 
-class User {
+class AppUser {
   final String userId;
   final String username;
-  final String role; //adminหรือuser
+  final String role;
 
-  User({// บังคับว่าห้ามข้อมูลขาดนะ
+  AppUser({
     required this.userId,
     required this.username,
-    required this.role, 
+    required this.role,
   });
 
-  factory User.fromJson(Map<String, dynamic> json) {//"ตัวแปลงข้อมูล" ทำหน้าที่รับข้อมูลดิบที่เซิร์ฟเวอร์ส่งมา แล้วแปลงให้เป็นข้อมูล User
+  factory AppUser.fromJson(Map<String, dynamic> json) {
     final userObject = json['user'] ?? json['data']?['user'];
-    String? foundUserId;//ตัวรับค่า
-    String? foundUsername;
-    String? foundRole; 
 
-// 4. ค้นหาข้อมูล
-    if (userObject != null && userObject is Map) {// ค้นหาข้อมูลจากตัวแปร userObject
+    String? foundUserId;
+    String? foundUsername;
+    String? foundRole;
+
+    if (userObject != null && userObject is Map) {
       foundUsername = userObject['username']?.toString();
-      foundUserId = userObject['user_id']?.toString() ?? userObject['id']?.toString();
-      foundRole = userObject['role']?.toString(); 
+      foundUserId =
+          userObject['user_id']?.toString() ?? userObject['id']?.toString();
+      foundRole = userObject['role']?.toString();
     } else {
-      foundUsername = json['username']?.toString(); //ค้นหาข้อมูลจากตัวแปร json
+      foundUsername = json['username']?.toString();
       foundUserId = json['user_id']?.toString() ?? json['id']?.toString();
-      foundRole = json['role']?.toString(); 
+      foundRole = json['role']?.toString();
     }
-  //เป็นการเช็คให้แน่ใจว่าได้รับ userId มาจริงๆ 
+
     if (foundUserId == null || foundUserId.isEmpty) {
       throw Exception('ไม่ได้รับ User ID จาก Server');
     }
 
-    return User(
+    return AppUser(
       userId: foundUserId,
       username: foundUsername ?? 'ผู้ใช้',
       role: foundRole ?? 'member',

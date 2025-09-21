@@ -121,4 +121,5 @@ class LottoService {
     final map = jsonDecode(res.body) as Map<String, dynamic>;
     return (map['inserted'] as num?)?.toInt() ?? 0;
   }
+  
 }

@@ -8,6 +8,11 @@ import 'package:google_fonts/google_fonts.dart';
 // --- Imports ที่สะอาดและเป็นระเบียบ ---
 import '../api/api_service.dart';
 import '../model/request/login_request.dart';
+import '../model/response/login_response.dart';
+
+import 'package:app_oracel999/admim/AdminMain.dart';
+import '../model/response/user_response.dart';  // ✅ import User class
+
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -31,9 +36,9 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  // --- ฟังก์ชัน Login ที่สั้น, สะอาด, และอ่านง่าย ---
+  // --- ฟังก์ชัน Login---
   Future<void> _login() async {
-    if (_emailCtrl.text.trim().isEmpty ) {
+    if (_emailCtrl.text.trim().isEmpty) {
       _showError('กรุณากรอกอีเมลที่ถูกต้อง');
       return;
     }
@@ -44,16 +49,30 @@ class _LoginPageState extends State<LoginPage> {
         email: _emailCtrl.text.trim(),
         password: _passwordCtrl.text,
       );
-      final user = await _apiService.login(request);
+      final User user = await _apiService.login(request);
 
-      if (mounted) {
+
+
+      if (user.role.toLowerCase() == 'admin') {
+        // ✅ ถ้า role เป็น admin
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => HomeScreen(
-              username: user.username,
-              userId: user.userId,
-            ),
+            builder:
+                (_) => AdminMain(
+                  username: user.username,
+                  userId: user.userId,
+                  role: user.role,
+                ),
+          ),
+        );
+      } else {
+        // ✅ ถ้า role เป็น user/member ปกติ
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder:
+                (_) => HomeScreen(username: user.username, userId: user.userId),
           ),
         );
       }
@@ -101,8 +120,10 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 child: SafeArea(
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 40,
+                      vertical: 20,
+                    ),
                     child: Column(
                       children: [
                         Image.asset('assets/image/logo.png', height: 400),
@@ -113,8 +134,10 @@ class _LoginPageState extends State<LoginPage> {
                             decoration: const InputDecoration(
                               hintText: 'Email',
                               border: InputBorder.none,
-                              prefixIcon:
-                                  Icon(Icons.person, color: Colors.black54),
+                              prefixIcon: Icon(
+                                Icons.person,
+                                color: Colors.black54,
+                              ),
                             ),
                           ),
                         ),
@@ -126,14 +149,18 @@ class _LoginPageState extends State<LoginPage> {
                             decoration: InputDecoration(
                               hintText: 'Password',
                               border: InputBorder.none,
-                              prefixIcon:
-                                  const Icon(Icons.lock, color: Colors.black54),
+                              prefixIcon: const Icon(
+                                Icons.lock,
+                                color: Colors.black54,
+                              ),
                               suffixIcon: IconButton(
-                                onPressed: () =>
-                                    setState(() => _obscure = !_obscure),
-                                icon: Icon(_obscure
-                                    ? Icons.visibility
-                                    : Icons.visibility_off),
+                                onPressed:
+                                    () => setState(() => _obscure = !_obscure),
+                                icon: Icon(
+                                  _obscure
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
+                                ),
                               ),
                             ),
                           ),
@@ -146,27 +173,32 @@ class _LoginPageState extends State<LoginPage> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFF3AB0A),
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
                             onPressed: _isLoading ? null : _login,
-                            child: _isLoading
-                                ? const CircularProgressIndicator(
-                                    color: Colors.white)
-                                : Text(
-                                    'Login',
-                                    style: GoogleFonts.carterOne(
-                                      fontSize: 32,
-                                      color: const Color(0xFFB51823),
+                            child:
+                                _isLoading
+                                    ? const CircularProgressIndicator(
+                                      color: Colors.white,
+                                    )
+                                    : Text(
+                                      'Login',
+                                      style: GoogleFonts.carterOne(
+                                        fontSize: 32,
+                                        color: const Color(0xFFB51823),
+                                      ),
                                     ),
-                                  ),
                           ),
                         ),
                         const SizedBox(height: 12),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text('คุณยังไม่มีบัญชีใช่ไหม ',
-                                style: GoogleFonts.inter(fontSize: 18)),
+                            Text(
+                              'คุณยังไม่มีบัญชีใช่ไหม ',
+                              style: GoogleFonts.inter(fontSize: 18),
+                            ),
                             TextButton(
                               onPressed: _goToRegister,
                               child: Text(
