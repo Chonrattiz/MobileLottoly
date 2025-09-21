@@ -1,6 +1,5 @@
 // lib/model/response/reward_models.dart
 
-
 class CurrentReward {
   final int prizeTier;
   final double prizeMoney;
@@ -37,13 +36,14 @@ class CheckResult {
     required this.prizeTier,
   });
 
-  factory CheckResult.fromJson(Map<String, dynamic> json) { //json มาแปลงร่างให้เป็นข้อมูลที่พร้อมใช้งาน แล้วนำไปเก็บไว้เพื่อรอแสดงผลบนหน้าจอ 
+  factory CheckResult.fromJson(Map<String, dynamic> json) {
+    //json มาแปลงร่างให้เป็นข้อมูลที่พร้อมใช้งาน แล้วนำไปเก็บไว้เพื่อรอแสดงผลบนหน้าจอ
     return CheckResult(
       isWinner: json['is_winner'] ?? false,
       message: json['message'] ?? 'เกิดข้อผิดพลาด',
       lottoNumber: json['lotto_number'] ?? '',
       prizeMoney: (json['prize_money'] as num?)?.toDouble() ?? 0.0,
       prizeTier: json['prize_tier'] ?? 0,
-    ); 
+    );
   }
 }

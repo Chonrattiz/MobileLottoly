@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:app_oracel999/model/response/lotto_item.dart';
 import 'package:app_oracel999/model/response/updateitem.dart';
 import 'package:app_oracel999/model/response/profile_models.dart';
+import 'package:app_oracel999/model/response/reward_data.dart';
 
 class LottoService {
   // Basic Functions
@@ -156,6 +157,81 @@ class LottoService {
       throw Exception(
         'ล้มเหลว: ${jsonDecode(response.body)['message'] ?? response.reasonPhrase}',
       );
+    }
+  }
+
+  // -----------------------
+  // ดึงรางวัลปัจจุบัน
+  // GET /rewards/currsent
+  // -----------------------
+  static Future<List<RewardData>> fetchCurrentRewards() async {
+    final url = Uri.parse('${AppConfig.baseUrl}/rewards/currsent');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body);
+      final List<dynamic> data = body['data'];
+      return data.map((json) => RewardData.fromJson(json)).toList();
+    } else {
+      throw Exception(
+        'Failed to load rewards: Server responded with status code ${response.statusCode}',
+      );
+    }
+  }
+
+  // -----------------------
+  // สุ่มรางวัล (Preview)
+  // GET /rewards/generate-preview
+  // -----------------------
+  static Future<List<RewardData>> generatePreview() async {
+    final url = Uri.parse('${AppConfig.baseUrl}/rewards/generate-preview');
+    final response = await http.get(url);
+    final body = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = body['data'];
+      return data.map((json) => RewardData.fromPreviewJson(json)).toList();
+    } else {
+      final message = body['message'] ?? 'เกิดข้อผิดพลาดในการสุ่มรางวัล';
+      throw Exception(message);
+    }
+  }
+
+  // -----------------------
+  // ปล่อยรางวัล (Release)
+  // POST /rewards/release
+  // -----------------------
+  static Future<String> releaseRewards(
+    List<RewardData> previewRewards, {
+    Map<int, double>? customPrizes,
+  }) async {
+    if (previewRewards.isEmpty) {
+      throw Exception('กรุณาสุ่มเลขรางวัลก่อนทำการปล่อยรางวัล');
+    }
+
+    final rewardsPayload =
+        previewRewards.map((reward) {
+          return {
+            'lotto_id': reward.lottoId,
+            'prize_tier': reward.prizeTier,
+            'prize_money': customPrizes?[reward.prizeTier] ?? reward.prizeMoney,
+          };
+        }).toList();
+
+    final requestBody = jsonEncode({'rewards': rewardsPayload});
+    final url = Uri.parse('${AppConfig.baseUrl}/rewards/release');
+
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json; charset=UTF-8'},
+      body: requestBody,
+    );
+
+    final body = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return body['message'] ?? 'ปล่อยรางวัลสำเร็จ!';
+    } else {
+      throw Exception(body['message'] ?? 'ปล่อยรางวัลล้มเหลว');
     }
   }
 }
