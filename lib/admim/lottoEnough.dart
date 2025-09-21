@@ -92,27 +92,21 @@ class lottoenough extends StatelessWidget {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(135.0),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(15),
-            bottomRight: Radius.circular(15),
+      appBar: AppBar(
+        title: Text(
+          'ลอตโต้ที่เหลือ',
+          style: GoogleFonts.itim(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
-          child: AppBar(
-            title: Padding(
-              padding: const EdgeInsets.only(top: 30.0),
-              child: Text(
-                'ลอตโต้ที่เหลือ',
-                style: GoogleFonts.itim(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            backgroundColor: const Color(0xFFD10400),
-          ),
+        ),
+        centerTitle: true,
+        backgroundColor: const Color(0xFFD10400),
+        elevation: 0,
+        toolbarHeight: 70, // ✅ ลดความสูงให้พอดี
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
         ),
       ),
       body: Stack(
@@ -216,18 +210,17 @@ class lottoenough extends StatelessWidget {
 }
 
 class _BottomActionBar extends StatelessWidget {
-  const _BottomActionBar();
+  const _BottomActionBar({this.onOpenNew, this.onOpenReward});
+  final Future<void> Function()? onOpenNew;
+  final Future<void> Function()? onOpenReward;
 
   @override
   Widget build(BuildContext context) {
     const barColor = Color(0xFFD10400);
-
-    return SafeArea(
-      top: false,
-      child: Container(
-        width: double.infinity,
-        height: 120,
-        color: barColor,
+    return BottomAppBar(
+      color: barColor,
+      elevation: 8,
+      child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         child: Row(
           children: [
@@ -235,23 +228,15 @@ class _BottomActionBar extends StatelessWidget {
               child: _NavButton(
                 icon: Icons.shuffle,
                 label: 'สุ่มLottoชุดใหม่',
-                onTap:
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const Newlotto()),
-                    ),
+                onTap: onOpenNew,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 10),
             Expanded(
               child: _NavButton(
                 icon: Icons.confirmation_number,
                 label: 'ประกาศรางวัล',
-                onTap:
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const RewardPage()),
-                    ),
+                onTap: onOpenReward,
               ),
             ),
           ],
@@ -261,11 +246,12 @@ class _BottomActionBar extends StatelessWidget {
   }
 }
 
+
 class _NavButton extends StatelessWidget {
   const _NavButton({required this.icon, required this.label, this.onTap});
   final IconData icon;
   final String label;
-  final VoidCallback? onTap;
+  final Future<void> Function()? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -275,13 +261,13 @@ class _NavButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: onTap ?? () {},
+        onTap: () => onTap?.call(),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 64,
-              height: 64,
+              width: 39,
+              height: 39,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.black,
@@ -293,10 +279,10 @@ class _NavButton extends StatelessWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                     ).createShader(b),
-                child: Icon(icon, size: 32, color: Colors.white),
+                child: Icon(icon, size: 20, color: Colors.white),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 2),
             ShaderMask(
               shaderCallback:
                   (b) => const LinearGradient(

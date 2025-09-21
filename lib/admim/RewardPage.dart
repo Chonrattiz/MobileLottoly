@@ -171,17 +171,25 @@ class _RewardPageState extends State<RewardPage> {
       appBar: AppBar(
         backgroundColor: const Color(0xFFE4222C),
         elevation: 0,
-        toolbarHeight: 120.0,
+        toolbarHeight: 70, // ✅ ลดความสูง
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           'ประกาศรางวัล',
-          style: GoogleFonts.itim(color: Colors.white, fontSize: 36),
+          style: GoogleFonts.itim(
+            color: Colors.white,
+            fontSize: 22, // ✅ ลด font ให้พอดี
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
       ),
+
       body: Stack(
         children: [
           SizedBox(

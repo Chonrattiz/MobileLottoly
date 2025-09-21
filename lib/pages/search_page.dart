@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 // --- Imports ที่สะอาดและเป็นระเบียบ ---
 import '../api/api_service.dart';
+import '../model/response/check_response.dart'; // 👈 **สำคัญ:** ต้อง import เข้ามาเพื่อรู้จัก CurrentReward
 import '../model/response/lotto_item.dart';
 import '../providers/cart_provider.dart';
 import 'navmenu.dart';
@@ -32,10 +33,45 @@ class _SearchPageState extends State<SearchPage> {
   bool _isLoading = false;
   String? _searchMessage;
 
+  // --- 1. State เพื่อเก็บสถานะการประกาศผลรางวัล ---
+  bool _areRewardsAnnounced = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // --- 2. เรียกฟังก์ชันตรวจสอบผลรางวัลเมื่อหน้าถูกโหลด ---
+    _checkRewardStatus();
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  // --- 3. ฟังก์ชันสำหรับตรวจสอบสถานะผลรางวัล (ฉบับแก้ไข) ---
+  Future<void> _checkRewardStatus() async {
+    try {
+      // ดึงข้อมูล "รายการ" ผลรางวัลล่าสุดจาก API
+      final List<CurrentReward> latestRewardsList = await _apiService.fetchLatestRewards();
+
+      // ตรวจสอบว่า "รายการ" ที่ได้มานั้นว่างเปล่าหรือไม่
+      if (mounted && latestRewardsList.isNotEmpty) {
+        // ถ้ารายการ "ไม่ว่าง" แสดงว่าประกาศผลแล้ว
+        setState(() {
+          _areRewardsAnnounced = true;
+        });
+      }
+    } catch (e) {
+      // หากเกิดข้อผิดพลาด ให้ถือว่ายังไม่ประกาศผล (เพื่อความปลอดภัย)
+      if (mounted) {
+         setState(() {
+          _areRewardsAnnounced = false;
+        });
+      }
+      // สามารถแสดงข้อความแจ้งเตือนได้หากต้องการ
+      // print("Could not check reward status: $e");
+    }
   }
 
   // --- ฟังก์ชันค้นหา ---
@@ -82,7 +118,7 @@ class _SearchPageState extends State<SearchPage> {
     try {
       final randomLotto = await _apiService.getRandomLotto();
       setState(() {
-        _searchController.text = randomLotto.lottoNumber;
+        _searchController.text = randomLotto.lottoNumber; // 👈 **แก้ไข:** lottoNumber
         _searchMessage = 'เจอเลขสุ่มแล้ว! กดค้นหาได้เลย';
       });
     } catch (e) {
@@ -113,7 +149,7 @@ class _SearchPageState extends State<SearchPage> {
         content: Text(message),
         backgroundColor: isError ? Colors.red : Colors.green,
         behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 1),//กำหนดเวลวแสดง1วิ
+        duration: const Duration(seconds: 1),
       ),
     );
   }
@@ -123,7 +159,7 @@ class _SearchPageState extends State<SearchPage> {
     final red = const Color(0xFFAD0101);
 
     return ScaffoldMessenger(
-      key: _scaffoldMessengerKey, // ✅ ใช้ ScaffoldMessenger แทน key ของ Scaffold
+      key: _scaffoldMessengerKey,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
@@ -265,7 +301,12 @@ class _SearchPageState extends State<SearchPage> {
     }
     return Column(
       children: _searchResults
-          .map((item) => _SearchResultTile(item: item, onAddToCart: () => _addToCart(item)))
+          .map((item) => _SearchResultTile(
+                item: item,
+                onAddToCart: () => _addToCart(item),
+                // --- 4. ส่งค่าสถานะการประกาศผลไปยัง Widget แสดงผล ---
+                areRewardsAnnounced: _areRewardsAnnounced,
+              ))
           .toList(),
     );
   }
@@ -274,8 +315,14 @@ class _SearchPageState extends State<SearchPage> {
 class _SearchResultTile extends StatelessWidget {
   final LottoItem item;
   final VoidCallback onAddToCart;
+  // --- 5. รับค่าสถานะการประกาศผล ---
+  final bool areRewardsAnnounced;
 
-  const _SearchResultTile({required this.item, required this.onAddToCart});
+  const _SearchResultTile({
+    required this.item,
+    required this.onAddToCart,
+    required this.areRewardsAnnounced,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -303,7 +350,7 @@ class _SearchResultTile extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
                       child: Center(
-                        child: Text(item.lottoNumber.split('').join(' '),
+                        child: Text(item.lottoNumber.split('').join(' '), // 👈 **แก้ไข:** lottoNumber
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black)),
                       ),
                     ),
@@ -315,7 +362,9 @@ class _SearchResultTile extends StatelessWidget {
                 Text('${item.price.toStringAsFixed(0)} บาท',
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 8),
-                if (item.status.toLowerCase() == 'sell')
+                // --- 6. เพิ่มเงื่อนไข !areRewardsAnnounced ในการแสดงผลไอคอนตะกร้า ---
+                // ไอคอนจะแสดงก็ต่อเมื่อ: สลากมีสถานะ 'sell' และ ยังไม่มีการประกาศผลรางวัล
+                if (item.status.toLowerCase() == 'sell' && !areRewardsAnnounced)
                   GestureDetector(
                     onTap: onAddToCart,
                     child: Container(
@@ -325,6 +374,7 @@ class _SearchResultTile extends StatelessWidget {
                     ),
                   )
                 else
+                  // ถ้าเงื่อนไขไม่ตรง ให้แสดงกล่องว่างๆ ที่มีขนาดเท่ากับไอคอน
                   const SizedBox(width: 45, height: 45),
               ],
             ),

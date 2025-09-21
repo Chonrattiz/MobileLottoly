@@ -90,29 +90,23 @@ class Lottoselled extends StatelessWidget {
       );
     }
 
-    return Scaffold(
+     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(135.0),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(15),
-            bottomRight: Radius.circular(15),
+      appBar: AppBar(
+        title: Text(
+          'ขายแล้ว',
+          style: GoogleFonts.itim(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
-          child: AppBar(
-            title: Padding(
-              padding: const EdgeInsets.only(top: 30.0),
-              child: Text(
-                'ขายแล้ว',
-                style: GoogleFonts.itim(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            backgroundColor: const Color(0xFFD10400),
-          ),
+        ),
+        centerTitle: true,
+        backgroundColor: const Color(0xFFD10400),
+        elevation: 0,
+        toolbarHeight: 70, // ✅ ความสูงกำลังพอดี
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
         ),
       ),
       body: Stack(

@@ -360,30 +360,24 @@ class _NewlottoState extends State<Newlotto> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(135.0),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(15),
-            bottomRight: Radius.circular(15),
-          ),
-          child: AppBar(
-            centerTitle: true,
-            backgroundColor: const Color(0xFFD10400),
-            flexibleSpace: Align(
-              alignment: const Alignment(0.0, 0.4),
-              child: Text(
-                'สุ่มLottoชุดใหม่',
-                style: GoogleFonts.itim(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+      appBar: AppBar(
+        title: Text(
+          'สุ่มLottoชุดใหม่',
+          style: GoogleFonts.itim(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
+        centerTitle: true,
+        backgroundColor: const Color(0xFFD10400),
+        elevation: 0,
+        toolbarHeight: 70, // ✅ ลดความสูง
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+        ),
       ),
+
       body: Stack(
         children: [
           Container(
