@@ -1,3 +1,4 @@
+import 'package:app_oracel999/admim/RewardPage.dart';
 import 'package:app_oracel999/model/response/lotto_item.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -242,10 +243,15 @@ class _BottomActionBar extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
-            const Expanded(
+            Expanded(
               child: _NavButton(
                 icon: Icons.confirmation_number,
                 label: 'ประกาศรางวัล',
+                onTap:
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const RewardPage()),
+                    ),
               ),
             ),
           ],
