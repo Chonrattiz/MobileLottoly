@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 // --- Imports ที่สะอาดและเป็นระเบียบ ---
 import '../api/api_service.dart';
+import '../model/response/check_response.dart'; // 👈 **สำคัญ:** Import เข้ามา
 import '../model/response/lotto_item.dart';
 import '../providers/cart_provider.dart';
 import 'navmenu.dart';
@@ -27,7 +28,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // 1. สร้าง Instance ของ ApiService
   final _apiService = ApiService();
 
   List<LottoItem> _luckyLottos = [];
@@ -35,26 +35,41 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
+  // --- 1. เพิ่ม State เพื่อเก็บสถานะการประกาศผลรางวัล ---
+  bool _areRewardsAnnounced = false;
+
   @override
   void initState() {
     super.initState();
     _fetchHomePageData();
   }
 
-  // --- 👇 2. แก้ไขฟังก์ชันนี้ให้เรียกใช้ ApiService ---
+  // --- 2. แก้ไขฟังก์ชันนี้ให้เรียกเช็กผลรางวัลด้วย ---
   Future<void> _fetchHomePageData() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
     try {
-      // เรียกใช้ฟังก์ชันจาก ApiService ที่เราสร้างไว้
-      final lottoData = await _apiService.fetchHomePageData();
+      // ใช้ Future.wait เพื่อให้ดึงข้อมูล 2 อย่างพร้อมกัน ทำให้เร็วขึ้น
+      final results = await Future.wait([
+        _apiService.fetchHomePageData(),
+        _apiService.fetchLatestRewards(),
+      ]);
+
+      // ดึงผลลัพธ์แต่ละอย่างออกมา
+      final lottoData = results[0] as Map<String, List<LottoItem>>;
+      final latestRewardsList = results[1] as List<CurrentReward>;
+
       setState(() {
-        // นำข้อมูลที่ได้มาอัปเดต State
+        // อัปเดตข้อมูลสลาก
         _luckyLottos = lottoData['luckyLottos']!;
         _auspiciousLottos = lottoData['auspiciousLottos']!;
+
+        // อัปเดตสถานะผลรางวัล
+        _areRewardsAnnounced = latestRewardsList.isNotEmpty;
       });
+
     } catch (e) {
       setState(() {
         _errorMessage =
@@ -67,7 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // ฟังก์ชันเพิ่มของลงตะกร้า ✅ (แก้ไขเป็นใช้ ScaffoldMessenger.of(context))
+  // ฟังก์ชันเพิ่มของลงตะกร้า
   void _addToCart(LottoItem lotto, String colorType) {
     final cart = Provider.of<CartProvider>(context, listen: false);
 
@@ -76,7 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
         const SnackBar(
           content: Text('อยู่ในตะกร้าแล้ว'),
           backgroundColor: Colors.red,
-          duration: const Duration(seconds: 1),//กำหนดเวลาแสดง1วิ
+          duration: Duration(seconds: 1),
         ),
       );
     } else {
@@ -85,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
         const SnackBar(
           content: Text('เพิ่มเข้าตะกร้าสำเร็จ'),
           backgroundColor: Colors.green,
-          duration: const Duration(seconds: 1),//กำหนดเวลาแสดง1วิ
+          duration: Duration(seconds: 1),
         ),
       );
     }
@@ -210,6 +225,8 @@ class _HomeScreenState extends State<HomeScreen> {
               lotto: lotto,
               onAddToCart: () =>
                   _addToCart(lotto, isLucky ? "red" : "yellow"),
+              // --- 3. ส่งค่าสถานะการประกาศผลไปยัง Card ---
+              areRewardsAnnounced: _areRewardsAnnounced,
               cardColor: isLucky
                   ? Colors.red[800]!
                   : const Color.fromARGB(255, 253, 214, 108),
@@ -226,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// --- Widgets ย่อยที่ควรย้ายไปไฟล์ Widgets/home/ ---
+// --- Widgets ย่อย ---
 class _SectionHeader extends StatelessWidget {
   final String title;
   final Color color;
@@ -257,13 +274,18 @@ class _LotteryCard extends StatelessWidget {
   final Color cardColor;
   final Color borderColor;
   final Color cartColor;
+  // --- 4. รับค่าสถานะการประกาศผล ---
+  final bool areRewardsAnnounced;
+
   const _LotteryCard({
     required this.lotto,
     required this.onAddToCart,
     required this.cardColor,
     required this.borderColor,
     required this.cartColor,
+    required this.areRewardsAnnounced, // เพิ่มเข้ามาใน constructor
   });
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -333,18 +355,23 @@ class _LotteryCard extends StatelessWidget {
                             color: cardColor == Colors.red[800]
                                 ? Colors.white
                                 : Colors.grey[800])),
-                    GestureDetector(
-                      onTap: onAddToCart,
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: CircleAvatar(
-                          radius: 20,
-                          backgroundColor: cartColor,
-                          child: const Icon(Icons.add_shopping_cart,
-                              color: Colors.white, size: 24),
+                    // --- 5. เพิ่มเงื่อนไขในการแสดงผลไอคอนตะกร้า ---
+                    if (!areRewardsAnnounced)
+                      GestureDetector(
+                        onTap: onAddToCart,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: CircleAvatar(
+                            radius: 20,
+                            backgroundColor: cartColor,
+                            child: const Icon(Icons.add_shopping_cart,
+                                color: Colors.white, size: 24),
+                          ),
                         ),
-                      ),
-                    ),
+                      )
+                    else
+                      // ถ้าประกาศผลแล้ว ให้แสดงกล่อง فاضي ที่มีขนาดใกล้เคียงกัน
+                      const SizedBox(width: 48, height: 40)
                   ],
                 ),
               ],
