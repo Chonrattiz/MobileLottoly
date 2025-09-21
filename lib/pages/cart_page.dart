@@ -233,7 +233,7 @@ class _CartItemTile extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
                     child: Text(
-                      lottoItem.lotteryNumber.split('').join(' '),
+                      lottoItem.lottoNumber.split('').join(' '),
                       textAlign: TextAlign.center,
                       style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20, color: Colors.black87),
                     ),

@@ -299,7 +299,7 @@ class _LotteryCard extends StatelessWidget {
                         decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12.0)),
-                        child: Text(lotto.lotteryNumber.split('').join(' '),
+                        child: Text(lotto.lottoNumber.split('').join(' '),
                             style: GoogleFonts.itim(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,

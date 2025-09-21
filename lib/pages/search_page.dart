@@ -82,7 +82,7 @@ class _SearchPageState extends State<SearchPage> {
     try {
       final randomLotto = await _apiService.getRandomLotto();
       setState(() {
-        _searchController.text = randomLotto.lotteryNumber;
+        _searchController.text = randomLotto.lottoNumber;
         _searchMessage = 'เจอเลขสุ่มแล้ว! กดค้นหาได้เลย';
       });
     } catch (e) {
@@ -303,7 +303,7 @@ class _SearchResultTile extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
                       child: Center(
-                        child: Text(item.lotteryNumber.split('').join(' '),
+                        child: Text(item.lottoNumber.split('').join(' '),
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black)),
                       ),
                     ),
