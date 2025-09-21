@@ -1,6 +1,6 @@
 // lib/pages/check_page.dart
 
-import 'package:app_oracel999/model/response/cash_in_request.dart';
+import 'package:app_oracel999/model/request/cash_in_request.dart';
 import 'package:app_oracel999/model/response/check_response.dart';
 import 'package:app_oracel999/pages/home.dart';
 import 'package:flutter/material.dart';

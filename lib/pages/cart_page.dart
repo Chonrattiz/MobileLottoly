@@ -1,7 +1,7 @@
 // lib/pages/cart_page.dart
 
 import 'package:app_oracel999/model/response/cart_entry.dart';
-import 'package:app_oracel999/model/response/purchase_request.dart';
+import 'package:app_oracel999/model/request/purchase_request.dart';
 import 'package:app_oracel999/pages/home.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';

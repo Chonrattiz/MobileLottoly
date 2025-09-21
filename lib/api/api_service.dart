@@ -1,8 +1,8 @@
 // lib/api/api_service.dart
 
 import 'dart:convert';
-import 'package:app_oracel999/model/response/cash_in_request.dart';
-import 'package:app_oracel999/model/response/purchase_request.dart';
+import 'package:app_oracel999/model/request/cash_in_request.dart';
+import 'package:app_oracel999/model/request/purchase_request.dart';
 import 'package:app_oracel999/model/response/profile_models.dart';
 import 'package:http/http.dart' as http;
 
