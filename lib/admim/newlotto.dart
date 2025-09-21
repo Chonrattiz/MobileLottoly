@@ -13,43 +13,13 @@ class Newlotto extends StatefulWidget {
 }
 
 class _NewlottoState extends State<Newlotto> {
-  List<DraftUpdateItem> _draftUpdates = []; // mapping lotto_id -> new number
+  List<DraftUpdateItem> _draftUpdates = []; // เก็บรายการที่สุ่มรอไว้
   bool _loadingPreview = false;
   bool _loadingRelease = false;
-
-  // ⬇️ เพิ่ม: ใช้เช็คว่ามีข้อมูลในตาราง lotto อยู่ไหม
-  late Future<int> _countFuture;
 
   @override
   void initState() {
     super.initState();
-    _countFuture = LottoService.countAll(); // เช็คจำนวนตอนเข้า
-  }
-
-  Future<void> _reloadCount() async {
-    setState(() {
-      _countFuture = LottoService.countAll();
-    });
-  }
-
-  // ปุ่มสร้างล็อตเตอรี่ 100 ชุด (ทำเฉพาะตอน count == 0)
-  Future<void> _seed100() async {
-    try {
-      final inserted = await LottoService.Generate(count: 100);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('สร้างล็อตเตอรี่สำเร็จ $inserted ชุด')),
-      );
-
-      // หลัง seed เสร็จ โหลดจำนวนใหม่ -> UI จะเปลี่ยนไปโหมดปกติทันที
-      await _reloadCount();
-
-      // ถ้าต้องแจ้งหน้าอื่นให้รีเฟรชด้วย (ถ้ามี event bus ของโปรเจ็กต์)
-      // LottoRefresh.instance.bump();
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('สร้างไม่สำเร็จ: $e')));
-    }
   }
 
   Future<void> _preview() async {
@@ -57,24 +27,70 @@ class _NewlottoState extends State<Newlotto> {
     try {
       final items = await LottoService.previewUpdate(
         count: 100,
-        status: 'sell,sold', // สุ่มจากทุกสถานะที่ต้องการ
+        status: 'sell,sold',
       );
-      // ✅ จัดเรียง lotto_id จากน้อยไปมาก
       items.sort((a, b) => a.lottoId.compareTo(b.lottoId));
 
-      setState(() => _draftUpdates = items); // แทนที่ชุดเดิม
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('สุ่มเลขชุดใหม่สำเร็จ (ยังไม่บันทึก)')),
-      );
+      setState(() => _draftUpdates = items);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('สุ่มเลขชุดใหม่สำเร็จ (ยังไม่บันทึก)')),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('สุ่มไม่สำเร็จ: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('สุ่มไม่สำเร็จ: $e')));
+      }
     } finally {
       setState(() => _loadingPreview = false);
     }
   }
 
+  // ✅ 1. สร้างฟังก์ชันสำหรับแสดง Dialog
+  Future<bool?> _showConfirmationDialog() async {
+    return showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text('ยืนยันการปล่อยชุดใหม่', style: GoogleFonts.itim()),
+          content: Text(
+            'คุณแน่ใจหรือไม่ว่าต้องการอัปเดตเลขชุดใหม่นี้ลงฐานข้อมูล?\n(การกระทำนี้ไม่สามารถย้อนกลับได้)',
+            style: GoogleFonts.itim(),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text(
+                'ยกเลิก',
+                style: GoogleFonts.itim(color: Colors.grey.shade700),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop(false); // ส่งค่า false กลับไป
+              },
+            ),
+            TextButton(
+              child: Text(
+                'ยืนยัน',
+                style: GoogleFonts.itim(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop(true); // ส่งค่า true กลับไป
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ✅ 2. ปรับปรุงฟังก์ชัน _release
   Future<void> _release() async {
     if (_draftUpdates.isEmpty) {
       ScaffoldMessenger.of(
@@ -82,21 +98,29 @@ class _NewlottoState extends State<Newlotto> {
       ).showSnackBar(const SnackBar(content: Text('ยังไม่มีเลขที่จะปล่อย')));
       return;
     }
+
+    // --- ส่วนที่เพิ่มเข้ามา ---
+    final bool? confirmed = await _showConfirmationDialog();
+    if (confirmed != true) {
+      return; // ถ้าผู้ใช้ไม่กดยืนยัน ให้ออกจากฟังก์ชัน
+    }
+    // --- สิ้นสุดส่วนที่เพิ่ม ---
+
     setState(() => _loadingRelease = true);
     try {
-      // ✅ UPDATE ตาม mapping ที่ preview มา (ไม่สุ่มใหม่, ไม่ insert)
-      await LottoService.bulkUpdateNumbers(_draftUpdates);
+      await LottoService.generateNew(_draftUpdates);
       setState(() => _draftUpdates = []);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('อัปเดตเลขลงฐานข้อมูลสำเร็จ')),
-      );
-
-      // แจ้งหน้าอื่นให้รีเฟรช (ถ้ามีระบบกลาง)
-      // LottoRefresh.instance.bump();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('อัปเดตเลขลงฐานข้อมูลสำเร็จ')),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('อัปเดตไม่สำเร็จ: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('อัปเดตไม่สำเร็จ: $e')));
+      }
     } finally {
       setState(() => _loadingRelease = false);
     }
@@ -127,50 +151,41 @@ class _NewlottoState extends State<Newlotto> {
         child: Stack(
           children: [
             Positioned(
-              left: 12,
-              top: 0,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: redHeader,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  label,
-                  style: GoogleFonts.itim(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
+              left: 20,
+              top: 6,
+              child: Text(
+                label,
+                style: GoogleFonts.itim(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 25),
+            Align(
+              alignment: Alignment.bottomCenter,
               child: Container(
                 height: 35,
-                margin: const EdgeInsets.symmetric(horizontal: 16),
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: digits
-                      .map(
-                        (d) => Text(
-                          '$d',
-                          style: GoogleFonts.itim(
-                            color: numberRed,
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      )
-                      .toList(),
+                  children:
+                      digits
+                          .map(
+                            (d) => Text(
+                              '$d',
+                              style: GoogleFonts.itim(
+                                color: numberRed,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          )
+                          .toList(),
                 ),
               ),
             ),
@@ -179,87 +194,69 @@ class _NewlottoState extends State<Newlotto> {
       );
     }
 
-    Widget _buildBodyList() {
-      // 🔶 โหมด PREVIEW: โชว์ชุดที่รอปล่อย (lotto_id จริง + เลขใหม่) — เรียง asc
+    Widget buildBodyList() {
       if (_draftUpdates.isNotEmpty) {
-        final previewSorted = [..._draftUpdates]
-          ..sort((a, b) => a.lottoId.compareTo(b.lottoId));
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final double cardW = constraints.maxWidth >= 373
-                ? 373.0
-                : constraints.maxWidth.toDouble();
-            return Column(
-              children: previewSorted.map((it) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: SizedBox(
-                    width: cardW,
-                    child: lottoSetCard(
-                      label: 'ชุดที่ ${it.lottoId}', // ใช้ lotto_id จริง
-                      digits: it.digits, // ใช้เลข "ใหม่" ที่จะอัปเดต
-                    ),
-                  ),
-                );
-              }).toList(),
+        return Column(
+          children: List.generate(_draftUpdates.length, (index) {
+            final it = _draftUpdates[index];
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: lottoSetCard(
+                label: 'ชุดที่ ${index + 1}',
+                digits: it.digits,
+              ),
             );
-          },
+          }),
         );
       }
 
-      // 🔷 โหมดปกติ: ดึงรายการจริงจาก DB — เรียง asc
       return FutureBuilder<List<LottoItem>>(
         future: LottoService.fetchAllAsc(),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
             return const Padding(
               padding: EdgeInsets.only(top: 40.0),
-              child: CircularProgressIndicator(),
+              child: Center(child: CircularProgressIndicator()),
             );
           }
           if (snap.hasError) {
             return Padding(
               padding: const EdgeInsets.only(top: 40.0),
-              child: Text(
-                'เกิดข้อผิดพลาด: ${snap.error}',
-                style: GoogleFonts.itim(color: Colors.white, fontSize: 16),
+              child: Center(
+                child: Text(
+                  'เกิดข้อผิดพลาด: ${snap.error}',
+                  style: GoogleFonts.itim(color: Colors.white, fontSize: 16),
+                ),
               ),
             );
           }
+
           final items = snap.data ?? [];
           if (items.isEmpty) {
             return Padding(
               padding: const EdgeInsets.only(top: 40.0),
-              child: Text(
-                'ไม่พบข้อมูลลอตเตอรี่',
-                style: GoogleFonts.itim(color: Colors.white, fontSize: 16),
+              child: Center(
+                child: Text(
+                  'ไม่พบข้อมูลลอตเตอรี่',
+                  style: GoogleFonts.itim(color: Colors.white, fontSize: 16),
+                ),
               ),
             );
           }
 
-          // ✅ จัดเรียง lotto_id asc (กันพลาด แม้ backend จะเรียงมาอยู่แล้ว)
           items.sort((a, b) => a.lottoId.compareTo(b.lottoId));
 
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              final double cardW = constraints.maxWidth >= 373
-                  ? 373.0
-                  : constraints.maxWidth.toDouble();
-              return Column(
-                children: items.map((it) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: SizedBox(
-                      width: cardW,
-                      child: lottoSetCard(
-                        label: 'ชุดที่ ${it.lottoId}',
-                        digits: it.digits,
-                      ),
-                    ),
-                  );
-                }).toList(),
+          return Column(
+            children: List.generate(items.length, (index) {
+              final it = items[index];
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: lottoSetCard(
+                  label: 'ชุดที่ ${index + 1}',
+                  digits: it.digits,
+                ),
               );
-            },
+            }),
           );
         },
       );
@@ -275,244 +272,162 @@ class _NewlottoState extends State<Newlotto> {
             bottomRight: Radius.circular(15),
           ),
           child: AppBar(
-            title: Padding(
-              padding: const EdgeInsets.only(top: 30.0),
+            centerTitle: true,
+            backgroundColor: const Color(0xFFD10400),
+            flexibleSpace: Align(
+              alignment: const Alignment(0.0, 0.4),
               child: Text(
                 'สุ่มLottoชุดใหม่',
                 style: GoogleFonts.itim(
-                  fontSize: 24,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
             ),
-            backgroundColor: const Color(0xFFD10400),
           ),
         ),
       ),
-
-      // ⬇️ ใช้ FutureBuilder เช็ค count ก่อน
-      body: FutureBuilder<int>(
-        future: _countFuture,
-        builder: (context, snap) {
-          // กำลังโหลดจำนวน
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          // โหลดจำนวนพลาด
-          if (snap.hasError) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('โหลดจำนวนล้มเหลว: ${snap.error}'),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: _reloadCount,
-                    child: const Text('ลองใหม่'),
-                  ),
-                ],
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/image/bb.png'),
+                fit: BoxFit.cover,
               ),
-            );
-          }
-
-          final cnt = snap.data ?? 0;
-
-          // ✅ ถ้า "ยังไม่มีข้อมูลเลย" -> แสดงปุ่มกลางจอ "สร้างล็อตเตอรี่ 100 ชุด"
-          if (cnt == 0) {
-            return Container(
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('assets/image/bg3.png'),
-                  fit: BoxFit.cover,
-                ),
-              ),
-              child: Center(
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.auto_mode),
-                  onPressed: _seed100,
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: const Color(0xFF90191B),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 16,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  label: Text(
-                    'สร้างล็อตเตอรี่ 100 ชุด',
-                    style: GoogleFonts.itim(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }
-
-          // ✅ มีข้อมูลแล้ว -> แสดง UI เดิม (ปุ่มสุ่ม/ปล่อย + รายการ)
-          return Stack(
-            children: [
-              Container(
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage('assets/image/bg3.png'),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-              SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 180, 20, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+            ),
+          ),
+          SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 160, 16, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  alignment: WrapAlignment.center,
                   children: [
-                    // ▶️ Action buttons
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // สุ่มอีกครั้ง (แทนที่ preview เดิมได้เรื่อย ๆ)
-                        ElevatedButton(
-                          onPressed: _loadingPreview ? null : _preview,
-                          style: ElevatedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: const Color(0xFF90191B),
-                            side: const BorderSide(color: goldBorder, width: 2),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(50),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 10,
-                            ),
-                          ),
-                          child: _loadingPreview
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Text(
-                                  'สุ่มชุดใหม่',
-                                  style: GoogleFonts.itim(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                    ElevatedButton(
+                      onPressed: _loadingPreview ? null : _preview,
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: const Color(0xFF90191B),
+                        side: const BorderSide(color: goldBorder, width: 2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(50),
                         ),
-                        const SizedBox(width: 12),
-
-                        // ปล่อย = UPDATE เลขใหม่ลง DB (ไม่สุ่มใหม่)
-                        ElevatedButton(
-                          onPressed: (_draftUpdates.isEmpty || _loadingRelease)
-                              ? null
-                              : _release,
-                          style: ElevatedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: Colors.green.shade700,
-                            side: const BorderSide(color: goldBorder, width: 2),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(50),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 10,
-                            ),
-                          ),
-                          child: _loadingRelease
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Text(
-                                  'ปล่อยชุดใหม่',
-                                  style: GoogleFonts.itim(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                        ),
-                        const SizedBox(width: 12),
-
-                        // เคลียร์ preview กลับไปดูข้อมูลจริง
-                        ElevatedButton(
-                          onPressed: _draftUpdates.isEmpty
-                              ? null
-                              : () {
-                                  setState(() => _draftUpdates = []);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('ล้างชุดที่รอปล่อยแล้ว'),
-                                    ),
-                                  );
-                                },
-                          style: ElevatedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: Colors.grey.shade700,
-                            side: const BorderSide(color: goldBorder, width: 2),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(50),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 10,
-                            ),
-                          ),
-                          child: Text(
-                            'เคลียร์ชุดนี้',
-                            style: GoogleFonts.itim(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    // แถบแจ้งเตือนเมื่ออยู่โหมด preview
-                    if (_draftUpdates.isNotEmpty)
-                      Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        margin: const EdgeInsets.only(bottom: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF212121).withOpacity(0.7),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: goldBorder, width: 1),
-                        ),
-                        child: Text(
-                          'กำลังแสดง “ชุดที่รอปล่อย” (กดสุ่มอีกครั้งเพื่อเปลี่ยน หรือกด “ปล่อยชุดใหม่” เพื่ออัปเดตลงฐานข้อมูล)',
-                          style: GoogleFonts.itim(
-                            color: Colors.white,
-                            fontSize: 12,
-                          ),
-                          textAlign: TextAlign.center,
+                          horizontal: 20,
+                          vertical: 10,
                         ),
                       ),
-
-                    const SizedBox(height: 6),
-
-                    // รายการ (preview หรือรายการจริง)
-                    _buildBodyList(),
+                      child:
+                          _loadingPreview
+                              ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                              : Text(
+                                'สุ่มชุดใหม่',
+                                style: GoogleFonts.itim(fontSize: 16),
+                              ),
+                    ),
+                    ElevatedButton(
+                      onPressed:
+                          (_draftUpdates.isEmpty || _loadingRelease)
+                              ? null
+                              : _release,
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.green.shade700,
+                        side: const BorderSide(color: goldBorder, width: 2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(50),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+                      ),
+                      child:
+                          _loadingRelease
+                              ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                              : Text(
+                                'ปล่อยชุดใหม่',
+                                style: GoogleFonts.itim(fontSize: 16),
+                              ),
+                    ),
+                    ElevatedButton(
+                      onPressed:
+                          _draftUpdates.isEmpty
+                              ? null
+                              : () {
+                                setState(() => _draftUpdates = []);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('ล้างชุดที่รอปล่อยแล้ว'),
+                                  ),
+                                );
+                              },
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.grey.shade700,
+                        side: const BorderSide(color: goldBorder, width: 2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(50),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+                      ),
+                      child: Text(
+                        'เคลียร์ชุดนี้',
+                        style: GoogleFonts.itim(fontSize: 16),
+                      ),
+                    ),
                   ],
                 ),
-              ),
-            ],
-          );
-        },
+                const SizedBox(height: 16),
+                if (_draftUpdates.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF212121).withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: goldBorder, width: 1),
+                    ),
+                    child: Text(
+                      'กำลังแสดง “ชุดที่รอปล่อย” (กด “ปล่อยชุดใหม่” เพื่อบันทึก)',
+                      style: GoogleFonts.itim(
+                        color: Colors.white,
+                        fontSize: 12,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                const SizedBox(height: 6),
+                buildBodyList(),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

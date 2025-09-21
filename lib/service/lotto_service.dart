@@ -61,32 +61,50 @@ class LottoService {
   // Preview & Release Functions
   static Future<List<DraftUpdateItem>> previewUpdate({
     int count = 100,
-    String status = 'sell,sold',
+    String status = 'sell',
   }) async {
     final uri = Uri.parse(
       '${AppConfig.baseUrl}/lotto/preview-update',
     ).replace(queryParameters: {'count': '$count', 'status': status});
+
     final res = await http.post(uri).timeout(const Duration(seconds: 20));
     if (res.statusCode != 200) {
       throw Exception('HTTP ${res.statusCode}: ${res.body}');
     }
+
     final map = jsonDecode(res.body) as Map<String, dynamic>;
-    final list = (map['data'] as List?) ?? <dynamic>[];
-    return list
-        .map((e) => DraftUpdateItem.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final list = (map['items'] as List?) ?? <dynamic>[];
+
+    // map -> DraftUpdateItem
+    return list.map((e) {
+      return DraftUpdateItem(
+        lottoId: e['lotto_id'] != null ? (e['lotto_id'] as num).toInt() : 0,
+        oldNumber: e['lotto_number_old']?.toString() ?? '',
+        newNumber: e['lotto_number']?.toString() ?? e['lotto_number_new'] ?? '',
+      );
+    }).toList();
   }
 
-  static Future<void> bulkUpdateNumbers(List<DraftUpdateItem> items) async {
-    final uri = Uri.parse('${AppConfig.baseUrl}/lotto/bulk-update');
+  // Generate: reset table + insert ชุดใหม่
+  // POST /lotto/generate
+  // ----------------------------------------
+  static Future<int> generateNew(List<DraftUpdateItem> items) async {
+    final uri = Uri.parse('${AppConfig.baseUrl}/lotto/generate');
+
     final body = {
       'items':
           items
               .map(
-                (it) => {'lotto_id': it.lottoId, 'lotto_number': it.newNumber},
+                (it) => {
+                  'lotto_number': it.newNumber,
+                  'status': 'sell',
+                  'price': 80,
+                  'created_by': null,
+                },
               )
               .toList(),
     };
+
     final res = await http
         .post(
           uri,
@@ -98,27 +116,7 @@ class LottoService {
     if (res.statusCode != 200) {
       throw Exception('HTTP ${res.statusCode}: ${res.body}');
     }
-  }
 
-  // Count & Generate Functions
-  static Future<int> countAll() async {
-    final uri = Uri.parse('${AppConfig.baseUrl}/lottos/count');
-    final res = await http.get(uri).timeout(const Duration(seconds: 10));
-    if (res.statusCode != 200) {
-      throw Exception('HTTP ${res.statusCode}: ${res.body}');
-    }
-    final map = jsonDecode(res.body) as Map<String, dynamic>;
-    return (map['count'] as num).toInt();
-  }
-
-  static Future<int> Generate({int count = 100}) async {
-    final uri = Uri.parse(
-      '${AppConfig.baseUrl}/lotto/generate',
-    ).replace(queryParameters: {'count': '$count'});
-    final res = await http.post(uri).timeout(const Duration(seconds: 20));
-    if (res.statusCode != 200) {
-      throw Exception('HTTP ${res.statusCode}: ${res.body}');
-    }
     final map = jsonDecode(res.body) as Map<String, dynamic>;
     return (map['inserted'] as num?)?.toInt() ?? 0;
   }
