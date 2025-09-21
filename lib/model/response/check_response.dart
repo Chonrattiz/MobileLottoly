@@ -1,28 +1,22 @@
 // lib/model/response/reward_models.dart
 
-// --- Model สำหรับรับข้อมูลผลรางวัลล่าสุด ---
-class LatestRewards {
-  final List<String> prize1;
-  final List<String> prize2;
-  final List<String> prize3;
-  final String last3;
-  final String last2;
 
-  LatestRewards({
-    this.prize1 = const [],
-    this.prize2 = const [],
-    this.prize3 = const [],
-    this.last3 = "------",
-    this.last2 = "--",
+class CurrentReward {
+  final int prizeTier;
+  final double prizeMoney;
+  final String lottoNumber;
+
+  CurrentReward({
+    required this.prizeTier,
+    required this.prizeMoney,
+    required this.lottoNumber,
   });
 
-  factory LatestRewards.fromJson(Map<String, dynamic> json) {
-    return LatestRewards(
-      prize1: List<String>.from(json['prize_1'] ?? []),
-      prize2: List<String>.from(json['prize_2'] ?? []),
-      prize3: List<String>.from(json['prize_3'] ?? []),
-      last3: json['last_3'] ?? "---",
-      last2: json['last_2'] ?? "--",
+  factory CurrentReward.fromJson(Map<String, dynamic> json) {
+    return CurrentReward(
+      prizeTier: json['prize_tier'] ?? 0,
+      prizeMoney: (json['prize_money'] as num?)?.toDouble() ?? 0,
+      lottoNumber: json['lotto_number'] ?? '',
     );
   }
 }

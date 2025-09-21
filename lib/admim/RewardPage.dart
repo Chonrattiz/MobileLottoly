@@ -1,31 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http; // 🎯 1. Import http package
-import 'dart:convert'; // 🎯 สำหรับ jsonDecode
+import '../api/api_service.dart';
+import 'package:app_oracel999/model/response/check_response.dart';
 
-// 🎯 2. สร้าง Model Class เพื่อรับข้อมูลจาก API
-class RewardData {
-  final int prizeTier;
-  final String lottoNumber;
-  final double prizeMoney;
-
-  RewardData({
-    required this.prizeTier,
-    required this.lottoNumber,
-    required this.prizeMoney,
-  });
-
-  // Factory constructor สำหรับแปลง JSON เป็น Object
-  factory RewardData.fromJson(Map<String, dynamic> json) {
-    return RewardData(
-      prizeTier: json['prize_tier'],
-      lottoNumber: json['lotto_number'],
-      prizeMoney: (json['prize_money'] as num).toDouble(),
-    );
-  }
-}
-
-// 🎯 3. เปลี่ยนเป็น StatefulWidget
 class RewardPage extends StatefulWidget {
   const RewardPage({super.key});
 
@@ -34,47 +11,13 @@ class RewardPage extends StatefulWidget {
 }
 
 class _RewardPageState extends State<RewardPage> {
-  // 🎯 4. สร้าง State variables สำหรับจัดการสถานะ
-  late Future<List<RewardData>> _rewardsFuture;
+  late Future<List<CurrentReward>> _rewardsFuture; // ✅ เปลี่ยน type
+  final _apiService = ApiService();
 
   @override
   void initState() {
     super.initState();
-    // 🎯 5. เรียกฟังก์ชัน fetch ข้อมูลเมื่อหน้าถูกสร้าง
-    _rewardsFuture = _fetchRewards();
-  }
-
-  // 🎯 6. สร้างฟังก์ชันสำหรับเรียก API
-  Future<List<RewardData>> _fetchRewards() async {
-    // --- เลือกใช้ URL ให้ถูกกับสถานการณ์ ---
-
-    // ✅ 1. แก้ไข endpoint จาก 'currsent' เป็น 'current'
-
-    // ✅ 2. เปลี่ยน 'localhost' เป็น IP Address ที่ถูกต้อง
-
-    // ‼️ หากทดสอบบน Android Emulator, ให้ใช้ IP นี้
-    final url = Uri.parse('https://api-oracel999.onrender.com/rewards/currsent');
-
-    // ‼️ หากทดสอบบนโทรศัพท์จริง, ให้ใช้ IP ของคอมพิวเตอร์ในวง Wi-Fi
-    // final url = Uri.parse('http://192.168.1.100:8080/rewards/current'); // << ใส่ IP จริงของคุณ
-
-    try {
-      final response = await http.get(url);
-
-      if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
-        final List<dynamic> data = body['data'];
-
-        return data.map((json) => RewardData.fromJson(json)).toList();
-      } else {
-        // ทำให้ Error message บอก Status Code ด้วย จะได้ debug ง่ายขึ้น
-        throw Exception(
-          'Failed to load rewards: Server responded with status code ${response.statusCode}',
-        );
-      }
-    } catch (e) {
-      throw Exception('Failed to load rewards: ${e.toString()}');
-    }
+    _rewardsFuture = _apiService.fetchLatestRewards(); // ✅ ใช้ CurrentReward
   }
 
   @override
@@ -106,19 +49,16 @@ class _RewardPageState extends State<RewardPage> {
           ),
           Column(
             children: [
-              _buildActionButtons(), // ปุ่มยังคงอยู่เหมือนเดิม
+              _buildActionButtons(),
               Expanded(
-                // 🎯 7. ใช้ FutureBuilder เพื่อจัดการสถานะการโหลดข้อมูล
-                child: FutureBuilder<List<RewardData>>(
+                child: FutureBuilder<List<CurrentReward>>( // ✅ ใช้ CurrentReward
                   future: _rewardsFuture,
                   builder: (context, snapshot) {
-                    // กรณี: กำลังโหลดข้อมูล
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(
                         child: CircularProgressIndicator(color: Colors.white),
                       );
                     }
-                    // กรณี: เกิด Error
                     if (snapshot.hasError) {
                       return Center(
                         child: Text(
@@ -127,7 +67,6 @@ class _RewardPageState extends State<RewardPage> {
                         ),
                       );
                     }
-                    // กรณี: ไม่มีข้อมูล หรือข้อมูลเป็น array ว่าง
                     if (!snapshot.hasData || snapshot.data!.isEmpty) {
                       return Center(
                         child: Text(
@@ -140,13 +79,10 @@ class _RewardPageState extends State<RewardPage> {
                       );
                     }
 
-                    // กรณี: โหลดข้อมูลสำเร็จ
                     final rewards = snapshot.data!;
                     return SingleChildScrollView(
                       padding: const EdgeInsets.only(bottom: 20),
-                      child: _buildPrizeSection(
-                        rewards,
-                      ), // ส่งข้อมูลที่ได้ไปแสดงผล
+                      child: _buildPrizeSection(rewards),
                     );
                   },
                 ),
@@ -158,32 +94,26 @@ class _RewardPageState extends State<RewardPage> {
     );
   }
 
-  // Widget _buildActionButtons() { ... โค้ดเดิม ... }
-  // Widget _buildGoldBorderButton(String text) { ... โค้ดเดิม ... }
-
-  // 🎯 8. ปรับปรุง `_buildPrizeSection` ให้รับข้อมูล rewards
-  Widget _buildPrizeSection(List<RewardData> rewards) {
-    // หาข้อมูลรางวัลแต่ละอันจาก list
-    // ใช้ .firstWhere หรือ loop ตามความเหมาะสม ในที่นี้ใช้ firstWhere เพื่อความง่าย
+  Widget _buildPrizeSection(List<CurrentReward> rewards) {
     final prize1 = rewards.firstWhere(
       (r) => r.prizeTier == 1,
       orElse: () =>
-          RewardData(prizeTier: 1, lottoNumber: '??????', prizeMoney: 0),
+          CurrentReward(prizeTier: 1, prizeMoney: 0, lottoNumber: '??????'),
     );
     final prize2 = rewards.firstWhere(
       (r) => r.prizeTier == 2,
       orElse: () =>
-          RewardData(prizeTier: 2, lottoNumber: '??????', prizeMoney: 0),
+          CurrentReward(prizeTier: 2, prizeMoney: 0, lottoNumber: '??????'),
     );
     final prize3 = rewards.firstWhere(
       (r) => r.prizeTier == 3,
       orElse: () =>
-          RewardData(prizeTier: 3, lottoNumber: '??????', prizeMoney: 0),
+          CurrentReward(prizeTier: 3, prizeMoney: 0, lottoNumber: '??????'),
     );
     final prize5 = rewards.firstWhere(
       (r) => r.prizeTier == 5,
       orElse: () =>
-          RewardData(prizeTier: 5, lottoNumber: '??????', prizeMoney: 0),
+          CurrentReward(prizeTier: 5, prizeMoney: 0, lottoNumber: '??????'),
     );
 
     return Padding(
@@ -193,7 +123,7 @@ class _RewardPageState extends State<RewardPage> {
           _buildPrizeCard(
             'รางวัลที่ ${prize1.prizeTier}',
             prize1.lottoNumber,
-            'Jackpot ${prize1.prizeMoney.toStringAsFixed(0)} ฿', // Format เงิน
+            'Jackpot ${prize1.prizeMoney.toStringAsFixed(0)} ฿',
             const Color(0xFFAD0101),
             height: 120,
             numberFontSize: 36,
@@ -231,7 +161,6 @@ class _RewardPageState extends State<RewardPage> {
             ],
           ),
           const SizedBox(height: 16),
-          // ตัวอย่างรางวัลที่ 5
           _buildPrizeCard(
             'รางวัลที่ ${prize5.prizeTier}',
             prize5.lottoNumber,

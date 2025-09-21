@@ -28,7 +28,7 @@ class LotteryCheckerPage extends StatefulWidget {
 class _LotteryCheckerPageState extends State<LotteryCheckerPage> {
   final _apiService = ApiService();
   final _numberController = TextEditingController();
-  late Future<LatestRewards> _rewardsFuture;
+  late Future<List<CurrentReward>> _rewardsFuture;
 
   @override
   void initState() {
@@ -70,7 +70,7 @@ class _LotteryCheckerPageState extends State<LotteryCheckerPage> {
     }
   }
 
-  // --- ฟังก์ชันสำหรับขึ้นเงินรางวัล (เวอร์ชันสะอาด) ---
+  // --- ฟังก์ชันสำหรับขึ้นเงินรางวัล  ---
   Future<void> _cashInPrize(CheckResult result) async {
     showDialog(
       context: context,
@@ -164,7 +164,7 @@ class _LotteryCheckerPageState extends State<LotteryCheckerPage> {
             borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
           ),
         ),
-        body: FutureBuilder<LatestRewards>(
+       body: FutureBuilder<List<CurrentReward>>(
           future: _rewardsFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -290,65 +290,76 @@ class _LotteryCheckerPageState extends State<LotteryCheckerPage> {
     );
   }
 
-  Widget _buildPrizeSection(LatestRewards latestRewards) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        children: [
-          _buildPrizeCard(
-            'รางวัลที่ 1',
-            latestRewards.prize1.first,
-            'Jackpot 6,000,000 ฿',
-            const Color(0xFFC62828),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildSmallPrizeCard(
-                  'รางวัลที่ 2',
-                  latestRewards.prize2.first,
-                  'win 200,000 ฿',
-                  const Color(0xFFD84315),
-                ),
+  Widget _buildPrizeSection(List<CurrentReward> rewards) {
+  final formatter = NumberFormat("#,###");
+
+  String getNumber(int tier) =>
+      rewards.firstWhere((r) => r.prizeTier == tier,
+          orElse: () => CurrentReward(prizeTier: tier, prizeMoney: 0, lottoNumber: 'ยังไม่ได้ประกาศ')).lottoNumber;
+
+  double getMoney(int tier) =>
+      rewards.firstWhere((r) => r.prizeTier == tier,
+          orElse: () => CurrentReward(prizeTier: tier, prizeMoney: 0, lottoNumber: '')).prizeMoney;
+
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: Column(
+      children: [
+        _buildPrizeCard(
+          'รางวัลที่ 1',
+          getNumber(1),
+          getMoney(1) > 0 ? "Jackpot ${formatter.format(getMoney(1))} ฿" : "Jackpot -",
+          const Color(0xFFC62828),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildSmallPrizeCard(
+                'รางวัลที่ 2',
+                getNumber(2),
+                getMoney(2) > 0 ? "รับ ${formatter.format(getMoney(2))} ฿" : "ยังไม่ประกาศ",
+                const Color(0xFFD84315),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildSmallPrizeCard(
-                  'รางวัลที่ 3',
-                  latestRewards.prize3.first,
-                  'win 80,000 ฿',
-                  const Color(0xFFEF6C00),
-                ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildSmallPrizeCard(
+                'รางวัลที่ 3',
+                getNumber(3),
+                getMoney(3) > 0 ? "รับ ${formatter.format(getMoney(3))} ฿" : "ยังไม่ประกาศ",
+                const Color(0xFFEF6C00),
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildSmallPrizeCard(
-                  'เลขท้าย 3 ตัว',
-                  latestRewards.last3,
-                  'win 4,000 ฿',
-                  const Color(0xFF2E7D32),
-                ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildSmallPrizeCard(
+                'เลขท้าย 3 ตัว',
+                getNumber(4),
+                getMoney(4) > 0 ? "รับ ${formatter.format(getMoney(4))} ฿" : "ยังไม่ประกาศ",
+                const Color(0xFF2E7D32),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildSmallPrizeCard(
-                  'เลขท้าย 2 ตัว',
-                  latestRewards.last2,
-                  'win 2,000 ฿',
-                  const Color(0xFF558B2F),
-                ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildSmallPrizeCard(
+                'เลขท้าย 2 ตัว',
+                getNumber(5),
+                getMoney(5) > 0 ? "รับ ${formatter.format(getMoney(5))} ฿" : "ยังไม่ประกาศ",
+                const Color(0xFF558B2F),
               ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
 
   void _showResultDialog(CheckResult result) {
     showDialog(
@@ -475,6 +486,7 @@ class _LotteryCheckerPageState extends State<LotteryCheckerPage> {
     String amount,
     Color color,
   ) {
+    final isFallback = number.contains('ยังไม่ได้ประกาศ');
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -503,12 +515,16 @@ class _LotteryCheckerPageState extends State<LotteryCheckerPage> {
           const SizedBox(height: 8),
           Text(
             number,
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 40,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 2,
-            ),
+            style:
+                isFallback
+                    ? GoogleFonts.itim(color: Colors.white, fontSize: 18)
+                    : GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 40,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                    ),
+            textAlign: TextAlign.center,
           ),
           Text(
             amount,
@@ -525,6 +541,7 @@ class _LotteryCheckerPageState extends State<LotteryCheckerPage> {
     String amount,
     Color color,
   ) {
+    final isFallback = number.contains('ยังไม่ได้ประกาศ');
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
@@ -552,12 +569,16 @@ class _LotteryCheckerPageState extends State<LotteryCheckerPage> {
           const SizedBox(height: 4),
           Text(
             number,
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1,
-            ),
+            style:
+                isFallback
+                    ? GoogleFonts.itim(color: Colors.white, fontSize: 18)
+                    : GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1,
+                    ),
+            textAlign: TextAlign.center,
           ),
           Text(
             amount,

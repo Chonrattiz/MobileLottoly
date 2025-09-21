@@ -128,20 +128,21 @@ class ApiService {
   }
 
   // --- 5. เพิ่มฟังก์ชันดึงผลรางวัลล่าสุด ---
-  Future<LatestRewards> fetchLatestRewards() async {
-    final url = Uri.parse('${AppConfig.baseUrl}/rewards/latest');
-    try {
-      final response = await http.get(url).timeout(const Duration(seconds: 10));
-      if (response.statusCode == 200) {
-        // ให้ Model จัดการแปลง JSON จาก key 'data'
-        return LatestRewards.fromJson(jsonDecode(response.body)['data']);
-      } else {
-        throw Exception('ไม่สามารถโหลดผลรางวัลได้ (รหัส: ${response.statusCode})');
-      }
-    } catch (e) {
-      throw Exception('การเชื่อมต่อล้มเหลว: ${e.toString()}');
+  Future<List<CurrentReward>> fetchLatestRewards() async {
+  final url = Uri.parse('${AppConfig.baseUrl}/rewards/currsent');
+  try {
+    final response = await http.get(url).timeout(const Duration(seconds: 10));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body)['data'] as List;
+      return data.map((e) => CurrentReward.fromJson(e)).toList();
+    } else {
+      throw Exception('โหลดผลรางวัลไม่สำเร็จ (รหัส: ${response.statusCode})');
     }
+  } catch (e) {
+    throw Exception('การเชื่อมต่อล้มเหลว: ${e.toString()}');
   }
+}
+
 
   // --- 6. เพิ่มฟังก์ชันตรวจรางวัล ---
   Future<CheckResult> checkLottoNumber(String number) async {
