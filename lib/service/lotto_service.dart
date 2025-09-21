@@ -234,4 +234,16 @@ class LottoService {
       throw Exception(body['message'] ?? 'ปล่อยรางวัลล้มเหลว');
     }
   }
+
+  // ✅ ฟังก์ชันที่เพิ่มเข้ามาใหม่
+  // สำหรับเรียก POST /lotto/clear
+  static Future<void> clearLottoData() async {
+    final uri = Uri.parse('${AppConfig.baseUrl}/lotto/clear');
+    final res = await http.post(uri).timeout(const Duration(seconds: 20));
+
+    if (res.statusCode != 200) {
+      throw Exception('HTTP ${res.statusCode}: ${res.body}');
+    }
+    // ไม่ต้อง return อะไรถ้าสำเร็จ
+  }
 }

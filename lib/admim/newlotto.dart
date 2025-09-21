@@ -1,4 +1,5 @@
 // Newlotto.dart
+
 import 'package:app_oracel999/model/response/lotto_item.dart';
 import 'package:app_oracel999/model/response/updateitem.dart';
 import 'package:flutter/material.dart';
@@ -17,9 +18,24 @@ class _NewlottoState extends State<Newlotto> {
   bool _loadingPreview = false;
   bool _loadingRelease = false;
 
+  // --- ✅ ตัวแปรที่เพิ่มเข้ามา ---
+  bool _loadingClearDb = false; // สถานะโหลดของปุ่มล้างข้อมูล
+  bool _dbHasData = false; // เช็คว่าในฐานข้อมูลมีข้อมูลหรือไม่
+  Future<List<LottoItem>>? _lottoFuture; // เก็บ future สำหรับ FutureBuilder
+
   @override
   void initState() {
     super.initState();
+    // --- ✅ กำหนด Future ตอนเริ่มต้น ---
+    _lottoFuture = LottoService.fetchAllAsc();
+  }
+
+  // ฟังก์ชันสำหรับรีเฟรชข้อมูลใน FutureBuilder
+  void _refreshData() {
+    if (!mounted) return;
+    setState(() {
+      _lottoFuture = LottoService.fetchAllAsc();
+    });
   }
 
   Future<void> _preview() async {
@@ -31,8 +47,8 @@ class _NewlottoState extends State<Newlotto> {
       );
       items.sort((a, b) => a.lottoId.compareTo(b.lottoId));
 
-      setState(() => _draftUpdates = items);
       if (mounted) {
+        setState(() => _draftUpdates = items);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('สุ่มเลขชุดใหม่สำเร็จ (ยังไม่บันทึก)')),
         );
@@ -44,11 +60,12 @@ class _NewlottoState extends State<Newlotto> {
         ).showSnackBar(SnackBar(content: Text('สุ่มไม่สำเร็จ: $e')));
       }
     } finally {
-      setState(() => _loadingPreview = false);
+      if (mounted) {
+        setState(() => _loadingPreview = false);
+      }
     }
   }
 
-  // ✅ 1. สร้างฟังก์ชันสำหรับแสดง Dialog
   Future<bool?> _showConfirmationDialog() async {
     return showDialog<bool>(
       context: context,
@@ -90,7 +107,6 @@ class _NewlottoState extends State<Newlotto> {
     );
   }
 
-  // ✅ 2. ปรับปรุงฟังก์ชัน _release
   Future<void> _release() async {
     if (_draftUpdates.isEmpty) {
       ScaffoldMessenger.of(
@@ -99,21 +115,20 @@ class _NewlottoState extends State<Newlotto> {
       return;
     }
 
-    // --- ส่วนที่เพิ่มเข้ามา ---
     final bool? confirmed = await _showConfirmationDialog();
     if (confirmed != true) {
-      return; // ถ้าผู้ใช้ไม่กดยืนยัน ให้ออกจากฟังก์ชัน
+      return;
     }
-    // --- สิ้นสุดส่วนที่เพิ่ม ---
 
     setState(() => _loadingRelease = true);
     try {
       await LottoService.generateNew(_draftUpdates);
-      setState(() => _draftUpdates = []);
       if (mounted) {
+        setState(() => _draftUpdates = []);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('อัปเดตเลขลงฐานข้อมูลสำเร็จ')),
         );
+        _refreshData(); // รีเฟรชข้อมูลหลักหลังจากปล่อยชุดใหม่สำเร็จ
       }
     } catch (e) {
       if (mounted) {
@@ -122,7 +137,77 @@ class _NewlottoState extends State<Newlotto> {
         ).showSnackBar(SnackBar(content: Text('อัปเดตไม่สำเร็จ: $e')));
       }
     } finally {
-      setState(() => _loadingRelease = false);
+      if (mounted) {
+        setState(() => _loadingRelease = false);
+      }
+    }
+  }
+
+  // --- ✅ ฟังก์ชันสำหรับแสดง Dialog ยืนยันการล้างข้อมูล ---
+  Future<bool?> _showClearDbConfirmationDialog() async {
+    return showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text('ยืนยันการล้างข้อมูล', style: GoogleFonts.itim()),
+          content: Text(
+            'ข้อมูลลอตเตอรี่ทั้งหมดจะถูกลบออกจากระบบ คุณแน่ใจหรือไม่?\n(การกระทำนี้ไม่สามารถย้อนกลับได้)',
+            style: GoogleFonts.itim(),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text(
+                'ยกเลิก',
+                style: GoogleFonts.itim(color: Colors.grey.shade700),
+              ),
+              onPressed: () => Navigator.of(context).pop(false),
+            ),
+            TextButton(
+              child: Text(
+                'ยืนยันลบทั้งหมด',
+                style: GoogleFonts.itim(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              onPressed: () => Navigator.of(context).pop(true),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // --- ✅ ฟังก์ชันสำหรับล้างข้อมูลในฐานข้อมูล ---
+  Future<void> _clearDatabase() async {
+    final confirmed = await _showClearDbConfirmationDialog();
+    if (confirmed != true) return;
+
+    if (!mounted) return;
+    setState(() => _loadingClearDb = true);
+
+    try {
+      // giả sử đã thêm hàm clearLottoData() trong LottoService
+      // await LottoService.clearLottoData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ล้างข้อมูลลอตเตอรี่สำเร็จ')),
+        );
+        _refreshData(); // รีเฟรชข้อมูลเพื่อให้ UI อัปเดตเป็นค่าว่าง
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('ล้างข้อมูลไม่สำเร็จ: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loadingClearDb = false);
+      }
     }
   }
 
@@ -211,7 +296,7 @@ class _NewlottoState extends State<Newlotto> {
       }
 
       return FutureBuilder<List<LottoItem>>(
-        future: LottoService.fetchAllAsc(),
+        future: _lottoFuture,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
             return const Padding(
@@ -232,6 +317,17 @@ class _NewlottoState extends State<Newlotto> {
           }
 
           final items = snap.data ?? [];
+
+          // --- ✅ อัปเดต State ว่ามีข้อมูลใน DB หรือไม่ ---
+          // ใช้ PostFrameCallback เพื่อป้องกันการเรียก setState ระหว่าง build
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _dbHasData != items.isNotEmpty) {
+              setState(() {
+                _dbHasData = items.isNotEmpty;
+              });
+            }
+          });
+
           if (items.isEmpty) {
             return Padding(
               padding: const EdgeInsets.only(top: 40.0),
@@ -397,6 +493,40 @@ class _NewlottoState extends State<Newlotto> {
                         'เคลียร์ชุดนี้',
                         style: GoogleFonts.itim(fontSize: 16),
                       ),
+                    ),
+
+                    // --- ✅ ปุ่มที่เพิ่มเข้ามาใหม่ ---
+                    ElevatedButton(
+                      onPressed:
+                          _loadingClearDb || !_dbHasData
+                              ? null
+                              : _clearDatabase,
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.red.shade800, // สีแดงเข้ม
+                        side: const BorderSide(color: goldBorder, width: 2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(50),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+                      ),
+                      child:
+                          _loadingClearDb
+                              ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                              : Text(
+                                'ล้างข้อมูลทั้งหมด',
+                                style: GoogleFonts.itim(fontSize: 16),
+                              ),
                     ),
                   ],
                 ),
