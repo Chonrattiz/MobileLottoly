@@ -4,6 +4,7 @@ import 'package:app_oracel999/config/app_config.dart';
 import 'package:http/http.dart' as http;
 import 'package:app_oracel999/model/response/lotto_item.dart';
 import 'package:app_oracel999/model/response/updateitem.dart';
+import 'package:app_oracel999/model/response/profile_models.dart';
 
 class LottoService {
   // Basic Functions
@@ -121,5 +122,42 @@ class LottoService {
     final map = jsonDecode(res.body) as Map<String, dynamic>;
     return (map['inserted'] as num?)?.toInt() ?? 0;
   }
-  
+
+  // ✅ ดึงข้อมูลโปรไฟล์
+  Future<UserProfile> fetchProfile(String userId) async {
+    try {
+      final url = Uri.parse('${AppConfig.baseUrl}/profile?user_id=$userId');
+      final response = await http.get(url).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return UserProfile.fromJson(data);
+      } else {
+        throw Exception(
+          'Failed to load profile. Status code: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      throw Exception('เกิดข้อผิดพลาด: $e');
+    }
+  }
+
+  // ✅ ลบข้อมูลทั้งหมด (เฉพาะ Admin)
+  Future<void> deleteAllData(String adminUserId) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/admin/clearData');
+
+    final response = await http
+        .post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'admin_user_id': adminUserId}),
+        )
+        .timeout(const Duration(seconds: 30));
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'ล้มเหลว: ${jsonDecode(response.body)['message'] ?? response.reasonPhrase}',
+      );
+    }
+  }
 }

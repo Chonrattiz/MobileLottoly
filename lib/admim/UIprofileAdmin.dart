@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:app_oracel999/pages/login.dart';
 import 'package:app_oracel999/model/response/profile_models.dart';
+import 'package:app_oracel999/service/lotto_service.dart';
+
 
 class ProfilePageUI extends StatefulWidget {
   final String userId;
@@ -20,13 +20,17 @@ class _ProfilePageUIState extends State<ProfilePageUI> {
   late Future<UserProfile> _futureProfile;
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  bool _isDeleting = false; // State สำหรับป้องกันการกดปุ่มซ้ำ
+  bool _isDeleting = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _futureProfile = fetchProfile();
-  }
+  final LottoService _lottoService = LottoService(); // ✅ ใช้ service
+
+@override
+void initState() {
+  super.initState();
+  _futureProfile = _lottoService.fetchProfile(widget.userId); // ✅ ถูกแล้ว
+}
+
+
 
   @override
   void dispose() {
@@ -35,35 +39,8 @@ class _ProfilePageUIState extends State<ProfilePageUI> {
     super.dispose();
   }
 
-  Future<UserProfile> fetchProfile() async {
-    try {
-      final url = Uri.parse(
-        'https://api-oracel999.onrender.com/profile?user_id=${widget.userId}',
-      );
-      final response = await http.get(url).timeout(const Duration(seconds: 15));
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final profile = UserProfile.fromJson(data);
-        _usernameController.text = profile.username;
-        _emailController.text = profile.email;
-        return profile;
-      } else {
-        throw Exception(
-          'Failed to load profile. Status code: ${response.statusCode}',
-        );
-      }
-    } on TimeoutException catch (_) {
-      throw Exception('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ (หมดเวลา)');
-    } catch (e) {
-      throw Exception('เกิดข้อผิดพลาด: $e');
-    }
-  }
-
-  // ✨ --- START: ฟังก์ชันสำหรับจัดการการลบข้อมูลทั้งหมด --- ✨
-
-  // 1. ฟังก์ชันหลักที่จะถูกเรียกเมื่อกดปุ่ม
+  // --- START: ฟังก์ชันจัดการลบข้อมูล ---
   Future<void> _confirmAndDeleteAllData() async {
-    // แสดง Dialog เพื่อให้ผู้ใช้ยืนยัน
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
@@ -76,35 +53,26 @@ class _ProfilePageUIState extends State<ProfilePageUI> {
           actions: <Widget>[
             TextButton(
               child: Text('ยกเลิก', style: GoogleFonts.itim()),
-              onPressed: () {
-                Navigator.of(context).pop(false); // ส่งค่า false กลับไป
-              },
+              onPressed: () => Navigator.of(context).pop(false),
             ),
             TextButton(
               style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: Text('ยืนยันลบ', style: GoogleFonts.itim()),
-              onPressed: () {
-                Navigator.of(context).pop(true); // ส่งค่า true กลับไป
-              },
+              onPressed: () => Navigator.of(context).pop(true),
             ),
           ],
         );
       },
     );
 
-    // 2. ตรวจสอบว่าผู้ใช้กดยืนยันหรือไม่
     if (confirmed == true) {
       _deleteAllData();
     }
   }
 
-  // 3. ฟังก์ชันสำหรับยิง API ไปยัง Server
   Future<void> _deleteAllData() async {
-    setState(() {
-      _isDeleting = true; // เริ่มกระบวนการลบ, ป้องกันการกดซ้ำ
-    });
+    setState(() => _isDeleting = true);
 
-    // แสดง SnackBar บอกสถานะ
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('กำลังลบข้อมูลทั้งหมด...', style: GoogleFonts.itim()),
@@ -113,49 +81,30 @@ class _ProfilePageUIState extends State<ProfilePageUI> {
     );
 
     try {
-      // ⚠️ นี่คือ Endpoint ที่คุณต้องไปสร้างบน Server
-      final url = Uri.parse('http://192.168.6.1:8080/admin/clearData');
+      await _lottoService.deleteAllData(widget.userId); // ✅ ใช้ service
 
-      // ส่ง userId ไปกับ body เพื่อให้ server รู้ว่าใครเป็นคนสั่งลบ
-      final response = await http
-          .post(
-            url,
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'admin_user_id': widget.userId}),
-          )
-          .timeout(const Duration(seconds: 30));
-
-      if (response.statusCode == 200) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('ลบข้อมูลทั้งหมดสำเร็จ!', style: GoogleFonts.itim()),
             backgroundColor: Colors.green,
           ),
         );
-        // อาจจะ refresh ข้อมูลบางอย่างหรือกลับไปหน้าหลัก
-      } else {
-        // ถ้า Server ตอบกลับมาเป็น Error
-        throw Exception(
-          'ล้มเหลว: ${jsonDecode(response.body)['message'] ?? response.reasonPhrase}',
-        );
       }
     } catch (e) {
-      // ถ้าเกิด Error ที่ฝั่งแอป (เช่น Timeout, เชื่อมต่อไม่ได้)
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('เกิดข้อผิดพลาด: $e', style: GoogleFonts.itim()),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
       if (mounted) {
-        setState(() {
-          _isDeleting = false; // เสร็จสิ้นกระบวนการ
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('เกิดข้อผิดพลาด: $e', style: GoogleFonts.itim()),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
+    } finally {
+      if (mounted) setState(() => _isDeleting = false);
     }
   }
-  // ✨ --- END: ฟังก์ชันสำหรับจัดการการลบข้อมูลทั้งหมด --- ✨
+  // --- END: ฟังก์ชันจัดการลบข้อมูล ---
 
   @override
   Widget build(BuildContext context) {
@@ -189,21 +138,6 @@ class _ProfilePageUIState extends State<ProfilePageUI> {
             borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
             side: BorderSide(color: Color.fromARGB(255, 0, 0, 0), width: 1),
           ),
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(0.0),
-            child: Container(
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.5),
-                    spreadRadius: 3,
-                    blurRadius: 7,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ),
         body: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -233,6 +167,9 @@ class _ProfilePageUIState extends State<ProfilePageUI> {
                         ),
                       );
                     } else if (snapshot.hasData) {
+                      final profile = snapshot.data!;
+                      _usernameController.text = profile.username;
+                      _emailController.text = profile.email;
                       return _buildProfileCard();
                     } else {
                       return const Center(
@@ -279,7 +216,6 @@ class _ProfilePageUIState extends State<ProfilePageUI> {
     );
   }
 
-  // แก้ไข Widget นี้ให้เรียกใช้ฟังก์ชันที่เราสร้าง
   Widget _buildActionButtons() {
     return Padding(
       padding: const EdgeInsets.only(top: 24.0),
@@ -288,8 +224,6 @@ class _ProfilePageUIState extends State<ProfilePageUI> {
           const SizedBox(height: 16),
           _buildActionButton(
             text: 'ลบข้อมูลทั้งหมด',
-            // ✨ 4. เมื่อกดปุ่ม ให้เรียกฟังก์ชัน _confirmAndDeleteAllData
-            // ถ้ากำลังลบอยู่ (_isDeleting) ให้ปิดการใช้งานปุ่ม (onPressed: null)
             onPressed: _isDeleting ? null : _confirmAndDeleteAllData,
           ),
         ],
@@ -297,7 +231,6 @@ class _ProfilePageUIState extends State<ProfilePageUI> {
     );
   }
 
-  // แก้ไข Widget นี้ให้รับ onPressed function ได้
   Widget _buildActionButton({required String text, VoidCallback? onPressed}) {
     return Container(
       width: 280,
@@ -310,13 +243,11 @@ class _ProfilePageUIState extends State<ProfilePageUI> {
         color: const Color(0xFFB71C1C),
       ),
       child: ElevatedButton(
-        onPressed: onPressed, // ✨ ใช้ onPressed ที่รับเข้ามา
+        onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           foregroundColor: Colors.white,
-          disabledBackgroundColor: Colors.grey.withOpacity(
-            0.5,
-          ), // สีตอนปิดใช้งาน
+          disabledBackgroundColor: Colors.grey.withOpacity(0.5),
           minimumSize: const Size(double.infinity, 50),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
