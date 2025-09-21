@@ -1,7 +1,7 @@
 class AppConfig {
   // เก็บ URL หลักไว้ที่นี่
 
-  static const String baseUrl = 'http://192.168.1.120:8080';
+  static const String baseUrl = 'https://api-oracel999.onrender.com';
 
 
 

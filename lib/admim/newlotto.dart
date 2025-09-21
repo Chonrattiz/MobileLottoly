@@ -190,13 +190,12 @@ class _NewlottoState extends State<Newlotto> {
     setState(() => _loadingClearDb = true);
 
     try {
-      // giả sử đã thêm hàm clearLottoData() trong LottoService
-      // await LottoService.clearLottoData();
+      await LottoService.clearLottoData(); // ✅ เรียกใช้จริง
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('ล้างข้อมูลลอตเตอรี่สำเร็จ')),
         );
-        _refreshData(); // รีเฟรชข้อมูลเพื่อให้ UI อัปเดตเป็นค่าว่าง
+        _refreshData();
       }
     } catch (e) {
       if (mounted) {

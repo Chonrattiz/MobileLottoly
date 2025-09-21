@@ -246,6 +246,6 @@ class LottoService {
       throw Exception('HTTP ${res.statusCode}: ${res.body}');
     }
     // ✅ log เมื่อสำเร็จ
-    debugPrint('[LottoService] ลบข้อมูลสำเร็จ -> ${res.body}');
+    debugPrint('[LottoService] ลบข้อมูลสำเร็จ555 -> ${res.body}');
   }
 }
