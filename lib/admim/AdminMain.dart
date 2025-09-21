@@ -148,25 +148,20 @@ class _AdminMainState extends State<AdminMain> {
       extendBodyBehindAppBar: true,
       // ✨ --- START: โค้ดที่แก้ไข --- ✨
       appBar: AppBar(
-        // 1. กำหนด Title โดยตรง
-        title: Padding(
-          padding: const EdgeInsets.only(top: 8.0), // อาจจะปรับแก้เล็กน้อย
-          child: Text(
-            'รายการ (Admin)',
-            style: GoogleFonts.itim(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+        title: Text(
+          'รายการ (Admin)',
+          style: GoogleFonts.itim(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
         backgroundColor: const Color(0xFFD10400),
-        elevation: 0, // ไม่มีเงา
-        // 2. ใช้ toolbarHeight เพื่อกำหนดความสูง
-        toolbarHeight: 110, // ปรับความสูงได้ตามต้องการ
-        // 3. ใช้ shape เพื่อทำให้ขอบมน (วิธีมาตรฐาน)
+        elevation: 0,
+        centerTitle: false, // ชิดซ้ายตามดีไซน์
+        toolbarHeight: 70, // ✅ ลดความสูงไม่ให้กินพื้นที่เกิน
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
         ),
         actions: [
           InkWell(
@@ -184,7 +179,7 @@ class _AdminMainState extends State<AdminMain> {
               );
             },
             child: Padding(
-              padding: const EdgeInsets.only(top: 0, right: 16, left: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 children: [
                   Text(
@@ -194,10 +189,10 @@ class _AdminMainState extends State<AdminMain> {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   const Icon(
                     Icons.account_circle,
-                    size: 44.0,
+                    size: 40,
                     color: Colors.white,
                   ),
                 ],
@@ -206,6 +201,7 @@ class _AdminMainState extends State<AdminMain> {
           ),
         ],
       ),
+
       // ✨ --- END: โค้ดที่แก้ไข --- ✨
       body: Stack(
         children: [
@@ -397,12 +393,10 @@ class _BottomActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const barColor = Color(0xFFD10400);
-    return SafeArea(
-      top: false,
-      child: Container(
-        width: double.infinity,
-        height: 120,
-        color: barColor,
+    return BottomAppBar(
+      color: barColor,
+      elevation: 8,
+      child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         child: Row(
           children: [
@@ -413,13 +407,12 @@ class _BottomActionBar extends StatelessWidget {
                 onTap: onOpenNew,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 10),
             Expanded(
-              // <- เอา const ออก เพื่อใส่ onTap ได้
               child: _NavButton(
                 icon: Icons.confirmation_number,
                 label: 'ประกาศรางวัล',
-                onTap: onOpenReward, // <- เรียก RewardPage
+                onTap: onOpenReward,
               ),
             ),
           ],
@@ -428,6 +421,7 @@ class _BottomActionBar extends StatelessWidget {
     );
   }
 }
+
 
 class _NavButton extends StatelessWidget {
   const _NavButton({required this.icon, required this.label, this.onTap});
@@ -448,8 +442,8 @@ class _NavButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 64,
-              height: 64,
+              width: 39,
+              height: 39,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.black,
@@ -461,10 +455,10 @@ class _NavButton extends StatelessWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                     ).createShader(b),
-                child: Icon(icon, size: 32, color: Colors.white),
+                child: Icon(icon, size: 20, color: Colors.white),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 2),
             ShaderMask(
               shaderCallback:
                   (b) => const LinearGradient(
