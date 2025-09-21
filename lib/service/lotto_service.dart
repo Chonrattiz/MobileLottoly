@@ -1,6 +1,7 @@
 // lotto_service.dart
 import 'dart:convert';
 import 'package:app_oracel999/config/app_config.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:app_oracel999/model/response/lotto_item.dart';
 import 'package:app_oracel999/model/response/updateitem.dart';
@@ -244,6 +245,7 @@ class LottoService {
     if (res.statusCode != 200) {
       throw Exception('HTTP ${res.statusCode}: ${res.body}');
     }
-    // ไม่ต้อง return อะไรถ้าสำเร็จ
+    // ✅ log เมื่อสำเร็จ
+    debugPrint('[LottoService] ลบข้อมูลสำเร็จ -> ${res.body}');
   }
 }
