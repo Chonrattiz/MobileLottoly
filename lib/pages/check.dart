@@ -164,7 +164,7 @@ class _LotteryCheckerPageState extends State<LotteryCheckerPage> {
             borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
           ),
         ),
-       body: FutureBuilder<List<CurrentReward>>(
+        body: FutureBuilder<List<CurrentReward>>(
           future: _rewardsFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -291,75 +291,112 @@ class _LotteryCheckerPageState extends State<LotteryCheckerPage> {
   }
 
   Widget _buildPrizeSection(List<CurrentReward> rewards) {
-  final formatter = NumberFormat("#,###");
+    final formatter = NumberFormat("#,###");
 
-  String getNumber(int tier) =>
-      rewards.firstWhere((r) => r.prizeTier == tier,
-          orElse: () => CurrentReward(prizeTier: tier, prizeMoney: 0, lottoNumber: 'ยังไม่ได้ประกาศ')).lottoNumber;
+    String getNumber(int tier) {
+      final reward = rewards.firstWhere(
+        (r) => r.prizeTier == tier,
+        orElse:
+            () => CurrentReward(
+              prizeTier: tier,
+              prizeMoney: 0,
+              lottoNumber: 'ยังไม่ได้ประกาศ',
+            ),
+      );
+      if (tier == 4) {
+        return reward.lottoNumber.length >= 3
+            ? reward.lottoNumber.substring(reward.lottoNumber.length - 3)
+            : reward.lottoNumber;
+      }
+      if (tier == 5) {
+        return reward.lottoNumber.length >= 2
+            ? reward.lottoNumber.substring(reward.lottoNumber.length - 2)
+            : reward.lottoNumber;
+      }
+      return reward.lottoNumber;
+    }
 
-  double getMoney(int tier) =>
-      rewards.firstWhere((r) => r.prizeTier == tier,
-          orElse: () => CurrentReward(prizeTier: tier, prizeMoney: 0, lottoNumber: '')).prizeMoney;
+    double getMoney(int tier) =>
+        rewards
+            .firstWhere(
+              (r) => r.prizeTier == tier,
+              orElse:
+                  () => CurrentReward(
+                    prizeTier: tier,
+                    prizeMoney: 0,
+                    lottoNumber: '',
+                  ),
+            )
+            .prizeMoney;
 
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16),
-    child: Column(
-      children: [
-        _buildPrizeCard(
-          'รางวัลที่ 1',
-          getNumber(1),
-          getMoney(1) > 0 ? "Jackpot ${formatter.format(getMoney(1))} ฿" : "Jackpot -",
-          const Color(0xFFC62828),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildSmallPrizeCard(
-                'รางวัลที่ 2',
-                getNumber(2),
-                getMoney(2) > 0 ? "รับ ${formatter.format(getMoney(2))} ฿" : "ยังไม่ประกาศ",
-                const Color(0xFFD84315),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          _buildPrizeCard(
+            'รางวัลที่ 1',
+            getNumber(1),
+            getMoney(1) > 0
+                ? "Jackpot ${formatter.format(getMoney(1))} ฿"
+                : "Jackpot -",
+            const Color(0xFFC62828),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildSmallPrizeCard(
+                  'รางวัลที่ 2',
+                  getNumber(2),
+                  getMoney(2) > 0
+                      ? "รับ ${formatter.format(getMoney(2))} ฿"
+                      : "ยังไม่ประกาศ",
+                  const Color(0xFFD84315),
+                ),
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildSmallPrizeCard(
-                'รางวัลที่ 3',
-                getNumber(3),
-                getMoney(3) > 0 ? "รับ ${formatter.format(getMoney(3))} ฿" : "ยังไม่ประกาศ",
-                const Color(0xFFEF6C00),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildSmallPrizeCard(
+                  'รางวัลที่ 3',
+                  getNumber(3),
+                  getMoney(3) > 0
+                      ? "รับ ${formatter.format(getMoney(3))} ฿"
+                      : "ยังไม่ประกาศ",
+                  const Color(0xFFEF6C00),
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildSmallPrizeCard(
-                'เลขท้าย 3 ตัว',
-                getNumber(4),
-                getMoney(4) > 0 ? "รับ ${formatter.format(getMoney(4))} ฿" : "ยังไม่ประกาศ",
-                const Color(0xFF2E7D32),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildSmallPrizeCard(
+                  'เลขท้าย 3 ตัว',
+                  getNumber(4),
+                  getMoney(4) > 0
+                      ? "รับ ${formatter.format(getMoney(4))} ฿"
+                      : "ยังไม่ประกาศ",
+                  const Color(0xFF2E7D32),
+                ),
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildSmallPrizeCard(
-                'เลขท้าย 2 ตัว',
-                getNumber(5),
-                getMoney(5) > 0 ? "รับ ${formatter.format(getMoney(5))} ฿" : "ยังไม่ประกาศ",
-                const Color(0xFF558B2F),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildSmallPrizeCard(
+                  'เลขท้าย 2 ตัว',
+                  getNumber(5),
+                  getMoney(5) > 0
+                      ? "รับ ${formatter.format(getMoney(5))} ฿"
+                      : "ยังไม่ประกาศ",
+                  const Color(0xFF558B2F),
+                ),
               ),
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
-}
-
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   void _showResultDialog(CheckResult result) {
     showDialog(
@@ -401,10 +438,8 @@ class _LotteryCheckerPageState extends State<LotteryCheckerPage> {
                       ),
                       onPressed: () {
                         if (result.isWinner) {
-                          // ถ้าเป็นผู้ชนะ ให้เรียกฟังก์ชันขึ้นเงิน
                           _cashInPrize(result);
                         } else {
-                          // ถ้าไม่ใช่ ก็แค่ปิด dialog
                           Navigator.pop(context);
                         }
                       },
