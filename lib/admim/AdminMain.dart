@@ -385,6 +385,8 @@ class _AdminMainState extends State<AdminMain> {
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//บาร์ล่าง
 class _BottomActionBar extends StatelessWidget {
   const _BottomActionBar({this.onOpenNew, this.onOpenReward});
   final Future<void> Function()? onOpenNew;
@@ -395,9 +397,10 @@ class _BottomActionBar extends StatelessWidget {
     const barColor = Color(0xFFD10400);
     return BottomAppBar(
       color: barColor,
+       height: 90,
       elevation: 8,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
         child: Row(
           children: [
             Expanded(
@@ -442,8 +445,8 @@ class _NavButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 39,
-              height: 39,
+              width: 32,
+              height: 32,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.black,
@@ -458,7 +461,7 @@ class _NavButton extends StatelessWidget {
                 child: Icon(icon, size: 20, color: Colors.white),
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 1),
             ShaderMask(
               shaderCallback:
                   (b) => const LinearGradient(

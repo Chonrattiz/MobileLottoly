@@ -10,7 +10,7 @@ import 'package:app_oracel999/pages/wallet_page.dart';
 class MyBottomNavigationBar extends StatelessWidget {
   // 1. เพิ่มตัวแปร userId เพื่อรับค่าเข้ามาใน Widget นี้
   final String userId;
-   final String username;
+  final String username;
 
   // 2. แก้ไข constructor ให้รับ userId เข้ามาตอนสร้าง Widget
   const MyBottomNavigationBar({

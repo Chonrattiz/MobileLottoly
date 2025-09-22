@@ -8,6 +8,7 @@ import 'package:app_oracel999/model/response/updateitem.dart';
 import 'package:app_oracel999/model/response/profile_models.dart';
 import 'package:app_oracel999/model/response/reward_data.dart';
 
+
 class LottoService {
   // Basic Functions
   static Future<List<LottoItem>> fetchAllAsc() async {
