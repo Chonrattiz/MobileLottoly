@@ -70,7 +70,7 @@ class _LotteryCheckerPageState extends State<LotteryCheckerPage> {
     }
   }
 
-  // --- ฟังก์ชันสำหรับขึ้นเงินรางวัล  ---
+  // --- ฟังก์ชันสำหรับขึ้นเงินรางวัล  ---
   Future<void> _cashInPrize(CheckResult result) async {
     showDialog(
       context: context,
@@ -303,6 +303,9 @@ class _LotteryCheckerPageState extends State<LotteryCheckerPage> {
               lottoNumber: 'ยังไม่ได้ประกาศ',
             ),
       );
+      if (reward.lottoNumber == 'ยังไม่ได้ประกาศ') {
+        return 'ยังไม่ได้ประกาศ';
+      }
       if (tier == 4) {
         return reward.lottoNumber.length >= 3
             ? reward.lottoNumber.substring(reward.lottoNumber.length - 3)
@@ -549,7 +552,7 @@ class _LotteryCheckerPageState extends State<LotteryCheckerPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            number,
+            isFallback ? number : number.split('').join(' '),
             style:
                 isFallback
                     ? GoogleFonts.itim(color: Colors.white, fontSize: 18)
@@ -603,7 +606,7 @@ class _LotteryCheckerPageState extends State<LotteryCheckerPage> {
           ),
           const SizedBox(height: 4),
           Text(
-            number,
+            isFallback ? number : number.split('').join(' '),
             style:
                 isFallback
                     ? GoogleFonts.itim(color: Colors.white, fontSize: 18)
